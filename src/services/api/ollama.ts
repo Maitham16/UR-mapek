@@ -14,6 +14,7 @@ import type {
 import type { MessageParam } from '@urhq-ai/sdk/resources/index.mjs'
 import type { Stream } from '@urhq-ai/sdk/streaming.mjs'
 import { randomUUID } from 'crypto'
+import { cacheOllamaModelMetadata } from '../../utils/model/ollamaModels.js'
 import {
   looksLikeBareJsonToolCallPrefix,
   parseBareJsonToolCalls,
@@ -517,7 +518,9 @@ async function getOllamaModelCapabilities(
       ollamaModelCapabilitiesCache.set(normalizedModel, null)
       return null
     }
-    const capabilities = parseOllamaModelCapabilities(await response.json())
+    const body = await response.json()
+    cacheOllamaModelMetadata(normalizedModel, body)
+    const capabilities = parseOllamaModelCapabilities(body)
     ollamaModelCapabilitiesCache.set(normalizedModel, capabilities)
     return capabilities
   } catch (error) {

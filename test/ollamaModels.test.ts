@@ -1,6 +1,11 @@
 import { expect, test } from 'bun:test'
+import { getContextWindowForModel } from '../src/utils/context.js'
 import {
+  cacheOllamaModelMetadata,
+  cacheOllamaModelsFromTags,
+  clearOllamaModelMetadataCacheForTests,
   getOllamaBaseUrl,
+  getOllamaContextLengthForModel,
   mergeModelOptions,
   parseOllamaModelNames,
 } from '../src/utils/model/ollamaModels.js'
@@ -65,3 +70,65 @@ test('mergeModelOptions appends only missing model values', () => {
     extra[1],
   ])
 })
+
+test('cacheOllamaModelsFromTags stores advertised context lengths', () => {
+  withCleanOllamaContext(() => {
+    cacheOllamaModelsFromTags({
+      models: [
+        {
+          name: 'minimax-m3:cloud',
+          model: 'minimax-m3:cloud',
+          remote_model: 'minimax-m3',
+          details: { context_length: 524_288 },
+        },
+      ],
+    })
+
+    expect(getOllamaContextLengthForModel('minimax-m3:cloud')).toBe(524_288)
+    expect(getOllamaContextLengthForModel('minimax-m3')).toBe(524_288)
+    expect(getContextWindowForModel('minimax-m3:cloud')).toBe(524_288)
+  })
+})
+
+test('cacheOllamaModelMetadata reads context length from api/show model_info', () => {
+  withCleanOllamaContext(() => {
+    cacheOllamaModelMetadata('minimax-m3:cloud', {
+      capabilities: ['completion', 'tools', 'thinking', 'vision'],
+      model_info: {
+        'minimax-m3.context_length': 524_288,
+      },
+    })
+
+    expect(getOllamaContextLengthForModel('minimax-m3:cloud')).toBe(524_288)
+    expect(getContextWindowForModel('minimax-m3:cloud')).toBe(524_288)
+  })
+})
+
+test('OLLAMA_CONTEXT_TOKENS overrides advertised Ollama context length', () => {
+  withCleanOllamaContext(() => {
+    process.env.OLLAMA_CONTEXT_TOKENS = '123456'
+    cacheOllamaModelMetadata('minimax-m3:cloud', {
+      model_info: {
+        'minimax-m3.context_length': 524_288,
+      },
+    })
+
+    expect(getContextWindowForModel('minimax-m3:cloud')).toBe(123_456)
+  })
+})
+
+function withCleanOllamaContext(run: () => void): void {
+  const originalContextTokens = process.env.OLLAMA_CONTEXT_TOKENS
+  clearOllamaModelMetadataCacheForTests()
+  try {
+    delete process.env.OLLAMA_CONTEXT_TOKENS
+    run()
+  } finally {
+    clearOllamaModelMetadataCacheForTests()
+    if (originalContextTokens === undefined) {
+      delete process.env.OLLAMA_CONTEXT_TOKENS
+    } else {
+      process.env.OLLAMA_CONTEXT_TOKENS = originalContextTokens
+    }
+  }
+}

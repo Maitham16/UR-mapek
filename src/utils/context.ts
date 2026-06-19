@@ -5,6 +5,7 @@ import { isEnvTruthy } from './envUtils.js'
 import { resolveAntModel } from './model/antModels.js'
 import { getCanonicalName } from './model/model.js'
 import { getModelCapability } from './model/modelCapabilities.js'
+import { getOllamaContextLengthForModel } from './model/ollamaModels.js'
 import { getAPIProvider } from './model/providers.js'
 
 // Model context window size (200k tokens for all models right now)
@@ -61,6 +62,10 @@ export function getContextWindowForModel(
     const override = parseInt(process.env.OLLAMA_CONTEXT_TOKENS || '', 10)
     if (!isNaN(override) && override > 0) {
       return override
+    }
+    const ollamaContextLength = getOllamaContextLengthForModel(model)
+    if (ollamaContextLength !== undefined) {
+      return ollamaContextLength
     }
   }
 
