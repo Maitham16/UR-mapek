@@ -81,6 +81,8 @@ type OllamaChatRequest = {
 }
 
 const OLLAMA_BASE_URL = 'http://localhost:11434'
+const DEFAULT_OLLAMA_REQUEST_TIMEOUT_MS = 300_000
+const REMOTE_OLLAMA_REQUEST_TIMEOUT_MS = 120_000
 
 export function createOllamaURHQClient(): unknown {
   return {
@@ -145,9 +147,10 @@ async function fetchOllamaChat(
   controller: AbortController,
   options?: RequestOptions,
 ): Promise<Response> {
-  // Default 30s timeout so a missing model, unreachable server, or hung
-  // connection fails fast instead of waiting for the OS TCP timeout.
-  const timeout = options?.timeout ?? 30_000
+  // Match the main API timeout convention. Larger local models can take more
+  // than 30s to load before Ollama returns response headers, especially after
+  // tool-result turns.
+  const timeout = getOllamaRequestTimeoutMs(options)
   const timeoutId =
     timeout > 0
       ? setTimeout(() => controller.abort(), timeout)
@@ -205,6 +208,31 @@ function createLinkedAbortController(options?: RequestOptions): AbortController 
 
 function getOllamaBaseUrl(): string {
   return OLLAMA_BASE_URL
+}
+
+export function getOllamaRequestTimeoutMs(
+  options?: RequestOptions,
+  env: Record<string, string | undefined> = process.env,
+): number {
+  if (options?.timeout !== undefined) {
+    return options.timeout
+  }
+
+  const override = parseInt(env.API_TIMEOUT_MS || '', 10)
+  if (override > 0) {
+    return override
+  }
+
+  return isTruthyEnv(env.UR_CODE_REMOTE)
+    ? REMOTE_OLLAMA_REQUEST_TIMEOUT_MS
+    : DEFAULT_OLLAMA_REQUEST_TIMEOUT_MS
+}
+
+function isTruthyEnv(value: string | undefined): boolean {
+  if (!value) {
+    return false
+  }
+  return !['0', 'false', 'no', 'off'].includes(value.toLowerCase())
 }
 
 function toOllamaChatRequest(
