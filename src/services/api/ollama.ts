@@ -14,7 +14,15 @@ import type {
 import type { MessageParam } from '@urhq-ai/sdk/resources/index.mjs'
 import type { Stream } from '@urhq-ai/sdk/streaming.mjs'
 import { randomUUID } from 'crypto'
-import { cacheOllamaModelMetadata } from '../../utils/model/ollamaModels.js'
+import {
+  cacheOllamaModelMetadata,
+  getOllamaContextLengthForModel,
+} from '../../utils/model/ollamaModels.js'
+import {
+  computeOllamaNumCtx,
+  getOllamaKeepAlive,
+  getOllamaNumCtxOverride,
+} from '../../utils/model/ollamaTuning.js'
 import {
   looksLikeBareJsonToolCallPrefix,
   parseBareJsonToolCalls,
@@ -81,9 +89,11 @@ type OllamaChatRequest = {
   stream: boolean
   think?: boolean | 'high' | 'medium' | 'low'
   tools?: OllamaTool[]
+  keep_alive?: string | number
   options?: {
     temperature?: number
     num_predict?: number
+    num_ctx?: number
   }
   format?: unknown
 }
@@ -290,8 +300,23 @@ function toOllamaChatRequest(
   if (typeof params.max_tokens === 'number') {
     options.num_predict = params.max_tokens
   }
+  const numCtx = computeOllamaNumCtx({
+    modelContextLength: getOllamaContextLengthForModel(params.model),
+    estimatedPromptTokens: estimateInputTokens(params),
+    maxTokens:
+      typeof params.max_tokens === 'number' ? params.max_tokens : undefined,
+    override: getOllamaNumCtxOverride(),
+  })
+  if (numCtx !== undefined) {
+    options.num_ctx = numCtx
+  }
   if (Object.keys(options).length > 0) {
     request.options = options
+  }
+
+  const keepAlive = getOllamaKeepAlive()
+  if (keepAlive !== undefined) {
+    request.keep_alive = keepAlive
   }
 
   const format = getOllamaFormat(params)

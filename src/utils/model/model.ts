@@ -32,19 +32,57 @@ import {
   getAntModelOverrideConfig,
   resolveAntModel,
 } from './antModels.js'
+import { getCachedOllamaModelNames } from './ollamaModels.js'
+import {
+  isOllamaAutoRouteEnabled,
+  pickBestCoderModel,
+  pickSmallFastModel,
+} from './ollamaRouter.js'
 
 export type ModelShortName = string
 export type ModelName = string
 export type ModelSetting = ModelName | ModelAlias | null
 const DEFAULT_OLLAMA_MODEL = 'llama3.2'
 
+// Adaptive routing picks are memoized so the session model stays stable once
+// the installed-model list has been discovered.
+let memoizedRoutedDefaultModel: string | undefined
+let memoizedRoutedFastModel: string | undefined
+
+export function __resetOllamaRouteMemoForTests(): void {
+  memoizedRoutedDefaultModel = undefined
+  memoizedRoutedFastModel = undefined
+}
+
 export function getDefaultOllamaModel(): ModelName {
-  return process.env.OLLAMA_MODEL || DEFAULT_OLLAMA_MODEL
+  if (process.env.OLLAMA_MODEL) {
+    return process.env.OLLAMA_MODEL
+  }
+  if (isOllamaAutoRouteEnabled()) {
+    if (memoizedRoutedDefaultModel) return memoizedRoutedDefaultModel
+    const routed = pickBestCoderModel(getCachedOllamaModelNames())
+    if (routed) {
+      memoizedRoutedDefaultModel = routed
+      return routed
+    }
+  }
+  return DEFAULT_OLLAMA_MODEL
 }
 
 export function getSmallFastModel(): ModelName {
   if (getAPIProvider() === 'ollama') {
-    return process.env.OLLAMA_SMALL_FAST_MODEL || getDefaultOllamaModel()
+    if (process.env.OLLAMA_SMALL_FAST_MODEL) {
+      return process.env.OLLAMA_SMALL_FAST_MODEL
+    }
+    if (isOllamaAutoRouteEnabled()) {
+      if (memoizedRoutedFastModel) return memoizedRoutedFastModel
+      const routed = pickSmallFastModel(getCachedOllamaModelNames())
+      if (routed) {
+        memoizedRoutedFastModel = routed
+        return routed
+      }
+    }
+    return getDefaultOllamaModel()
   }
   return process.env.URHQ_SMALL_FAST_MODEL || getDefaultmodelHModel()
 }

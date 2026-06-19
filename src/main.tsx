@@ -117,7 +117,8 @@ import { logError } from './utils/log.js';
 import { getModelDeprecationWarning } from './utils/model/deprecation.js';
 import { getDefaultMainLoopModel, getUserSpecifiedModelSetting, normalizeModelStringForAPI, parseUserSpecifiedModel } from './utils/model/model.js';
 import { ensureModelStringsInitialized } from './utils/model/modelStrings.js';
-import { refreshOllamaModelMetadata } from './utils/model/ollamaModels.js';
+import { listOllamaModelNames, refreshOllamaModelMetadata } from './utils/model/ollamaModels.js';
+import { getAPIProvider } from './utils/model/providers.js';
 import { PERMISSION_MODES } from './utils/permissions/PermissionMode.js';
 import { checkAndDisableBypassPermissions, getAutoModeEnabledStateIfCached, initializeToolPermissionContext, initialPermissionModeFromCLI, isDefaultPermissionModeAuto, parseToolListFromCLI, removeDangerousPermissions, stripDangerousPermissionsForAutoMode, verifyAutoModeGateAccess } from './utils/permissions/permissionSetup.js';
 import { cleanupOrphanedPluginVersionsInBackground } from './utils/plugins/cacheUtils.js';
@@ -2109,6 +2110,12 @@ async function run(): Promise<CommanderCommand> {
       effectiveModel = parseUserSpecifiedModel(mainThreadAgentDefinition.model);
     }
     setMainLoopModelOverride(effectiveModel);
+
+    // Warm the installed-model list so adaptive routing can pick the best
+    // coder/fast model before the initial model is resolved.
+    if (getAPIProvider() === 'ollama' && !getUserSpecifiedModelSetting()) {
+      await listOllamaModelNames(AbortSignal.timeout(750)).catch(() => {});
+    }
 
     // Compute resolved model for hooks (use user-specified model at launch)
     setInitialMainLoopModel(getUserSpecifiedModelSetting() || null);

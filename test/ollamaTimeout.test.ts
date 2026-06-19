@@ -79,6 +79,31 @@ test('Ollama chat requests omit think when the model does not advertise thinking
   }
 })
 
+test('Ollama chat requests set num_ctx and keep_alive for warm, full-context runs', async () => {
+  const previousFetch = globalThis.fetch
+  let requestBody: Record<string, any> | undefined
+
+  globalThis.fetch = createMockOllamaFetch({
+    capabilities: ['completion', 'tools'],
+    onChatRequest(body) {
+      requestBody = body
+    },
+  })
+
+  try {
+    const { data } = await createStreamingOllamaResponse({
+      model: 'tuning-model:latest',
+    })
+    for await (const _event of data) {
+      // consume the stream so body parsing runs
+    }
+    expect(requestBody?.keep_alive).toBe('30m')
+    expect(requestBody?.options?.num_ctx).toBe(32768)
+  } finally {
+    globalThis.fetch = previousFetch
+  }
+})
+
 test('Ollama chat requests keep vision inputs for vision-capable models', async () => {
   const previousFetch = globalThis.fetch
   let requestBody: Record<string, any> | undefined

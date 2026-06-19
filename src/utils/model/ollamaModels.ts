@@ -1,7 +1,19 @@
 import type { ModelOption } from './modelOptions.js'
+import { categorizeOllamaModels } from './ollamaRouter.js'
 
 const OLLAMA_BASE_URL = 'http://localhost:11434'
 const ollamaModelMetadataByName = new Map<string, OllamaModelMetadata>()
+let cachedOllamaModelNames: string[] = []
+
+export function getCachedOllamaModelNames(): string[] {
+  return cachedOllamaModelNames
+}
+
+function setCachedOllamaModelNames(names: string[]): void {
+  if (names.length > 0) {
+    cachedOllamaModelNames = names
+  }
+}
 
 type OllamaModelMetadata = {
   contextLength?: number
@@ -49,18 +61,52 @@ export async function listOllamaModelNames(
   }
   const body = await response.json()
   cacheOllamaModelsFromTags(body)
-  return parseOllamaModelNames(body)
+  const names = parseOllamaModelNames(body)
+  setCachedOllamaModelNames(names)
+  return names
 }
 
 export async function getOllamaModelOptions(
   signal?: AbortSignal,
 ): Promise<ModelOption[]> {
   const names = await listOllamaModelNames(signal)
+  // Best-effort warm of context windows for models not yet inspected.
+  await Promise.allSettled(
+    names
+      .filter(name => getOllamaContextLengthForModel(name) === undefined)
+      .map(name => refreshOllamaModelMetadata(name, { timeoutMs: 500 })),
+  )
+  const { coder, fast } = categorizeOllamaModels(names)
+  const coderSet = new Set(coder)
+  const fastSet = new Set(fast)
   return names.map(name => ({
     value: name,
     label: name,
-    description: 'Installed Ollama model',
+    description: describeOllamaModel(name, coderSet, fastSet),
   }))
+}
+
+function describeOllamaModel(
+  name: string,
+  coderSet: Set<string>,
+  fastSet: Set<string>,
+): string {
+  const tags: string[] = []
+  if (coderSet.has(name)) tags.push('coder')
+  else if (fastSet.has(name)) tags.push('fast')
+  const contextLength = getOllamaContextLengthForModel(name)
+  if (contextLength && contextLength > 0) {
+    tags.push(`${formatContextWindow(contextLength)} ctx`)
+  }
+  return tags.length > 0
+    ? `Installed · ${tags.join(' · ')}`
+    : 'Installed Ollama model'
+}
+
+function formatContextWindow(contextLength: number): string {
+  return contextLength >= 1024
+    ? `${Math.round(contextLength / 1024)}K`
+    : String(contextLength)
 }
 
 export function mergeModelOptions(
@@ -168,6 +214,7 @@ export function getOllamaContextLengthForModel(
 
 export function clearOllamaModelMetadataCacheForTests(): void {
   ollamaModelMetadataByName.clear()
+  cachedOllamaModelNames = []
 }
 
 function getOllamaModelNameCandidates(value: unknown): string[] {

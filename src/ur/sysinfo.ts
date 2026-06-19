@@ -4,6 +4,12 @@ import { existsSync, readdirSync } from 'node:fs'
 import { arch, homedir, platform, release } from 'node:os'
 import { join } from 'node:path'
 import { detectProjectDna, formatDna } from './projectDna.ts'
+import { parseOllamaModelNames } from '../utils/model/ollamaModels.js'
+import {
+  pickBestCoderModel,
+  pickSmallFastModel,
+  recommendedCoderModelToPull,
+} from '../utils/model/ollamaRouter.js'
 
 export function commandExists(bin: string): boolean {
   try {
@@ -55,16 +61,26 @@ export async function urDoctor(cwd: string): Promise<string> {
 
   const host = 'http://localhost:11434'
   let ollama: string
+  let ollamaModels: string[] = []
   try {
     const res = await fetch(`${host}/api/tags`, { signal: AbortSignal.timeout(1500) })
     if (res.ok) {
-      const d = (await res.json()) as { models?: unknown[] }
-      ollama = `ok — ${d.models?.length ?? 0} model(s) @ ${host}`
+      ollamaModels = parseOllamaModelNames(await res.json())
+      ollama = `ok — ${ollamaModels.length} model(s) @ ${host}`
     } else ollama = `error ${res.status} @ ${host}`
   } catch {
     ollama = `unreachable @ ${host} (start with: ollama serve)`
   }
   lines.push(`ollama:     ${ollama}`)
+  if (ollamaModels.length > 0) {
+    lines.push(
+      `  routing:  main=${pickBestCoderModel(ollamaModels) ?? '?'} · fast=${pickSmallFastModel(ollamaModels) ?? '?'}`,
+    )
+    const pull = recommendedCoderModelToPull(ollamaModels)
+    if (pull) {
+      lines.push(`  tip:      no coder model found — consider: ollama pull ${pull}`)
+    }
+  }
 
   const urDir = join(cwd, '.ur')
   if (existsSync(urDir)) {
