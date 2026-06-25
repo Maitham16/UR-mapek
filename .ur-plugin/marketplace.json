@@ -5,7 +5,7 @@
     "url": "https://github.com/Maitham16/ur-agent"
   },
   "metadata": {
-    "version": "0.2.0",
+    "version": "0.3.0",
     "description": "First-party plugins for UR Agent. This marketplace is hosted in the same repository as the agent itself."
   },
   "plugins": [
@@ -50,6 +50,55 @@
       "description": "/evaluate-response — adversarial self-evaluation of the most recent assistant turn. Catches hallucinated completions, missed sub-questions, and narrated-but-not-done work.",
       "category": "quality",
       "tags": ["quality", "self-evaluation", "verifier"]
+    },
+    {
+      "name": "obsidian",
+      "source": "./marketplace-plugins/obsidian",
+      "description": "/second-brain, /daily-note, /moc, /backlinks, /vault-search — operate an Obsidian vault as a second brain via direct file edits or the Local REST API MCP server.",
+      "category": "knowledge",
+      "tags": ["obsidian", "second-brain", "zettelkasten", "pkm", "notes", "mcp"]
+    },
+    {
+      "name": "github",
+      "source": "./marketplace-plugins/github",
+      "description": "/gh-pr-review, /gh-pr-create, /gh-issues, /gh-repo-health — drive GitHub through the official remote MCP server or the gh CLI.",
+      "category": "integration",
+      "tags": ["github", "pull-request", "issues", "ci", "devops", "mcp"]
+    },
+    {
+      "name": "gitlab",
+      "source": "./marketplace-plugins/gitlab",
+      "description": "/gl-mr-review, /gl-mr-create, /gl-issues, /gl-pipeline — drive GitLab through the official MCP server or the glab CLI.",
+      "category": "integration",
+      "tags": ["gitlab", "merge-request", "issues", "ci-cd", "pipeline", "mcp"]
+    },
+    {
+      "name": "huggingface",
+      "source": "./marketplace-plugins/huggingface",
+      "description": "/hf-model-search, /hf-dataset-search, /hf-model-card, /hf-download — search, vet, and fetch Hugging Face models and datasets via the official MCP server or the hf CLI.",
+      "category": "integration",
+      "tags": ["huggingface", "models", "datasets", "machine-learning", "hub", "mcp"]
+    },
+    {
+      "name": "word",
+      "source": "./marketplace-plugins/word",
+      "description": "/docx-new, /docx-from-md, /docx-review, /docx-edit — create, convert, review, and edit Word documents via the Office Word MCP server or a pandoc / python-docx fallback.",
+      "category": "documents",
+      "tags": ["word", "docx", "document", "office", "mcp"]
+    },
+    {
+      "name": "powerpoint",
+      "source": "./marketplace-plugins/powerpoint",
+      "description": "/pptx-new, /pptx-from-md, /pptx-review, /pptx-theme — build, convert, review, and theme PowerPoint decks via the Office PowerPoint MCP server or a python-pptx fallback.",
+      "category": "documents",
+      "tags": ["powerpoint", "pptx", "slides", "presentation", "office", "mcp"]
+    },
+    {
+      "name": "miro",
+      "source": "./marketplace-plugins/miro",
+      "description": "/miro-board, /miro-diagram, /miro-stickies, /miro-export — create boards, diagrams, and sticky clusters and summarize boards via Miro's official MCP server or the REST API.",
+      "category": "integration",
+      "tags": ["miro", "whiteboard", "diagram", "board", "brainstorm", "mcp"]
     }
   ]
 }

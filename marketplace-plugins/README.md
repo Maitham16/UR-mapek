@@ -16,6 +16,19 @@ them are published.
 | [`explain-error`](./explain-error) | `/explain-error [command]` | Re-runs a failing command and decodes the error in plain English with two next steps. |
 | [`release-notes`](./release-notes) | `/release-notes [since-ref]` | Drafts release notes grouped by Features / Fixes / Documentation / Other since the last tag. |
 | [`evaluate-response`](./evaluate-response) | `/evaluate-response` | Adversarial self-evaluation of the most recent assistant turn. |
+| [`obsidian`](./obsidian) | `/second-brain` (+4) | Operate an Obsidian vault as a second brain — atomic notes, daily notes, MOCs, backlinks, cited search. Direct file edits or the Local REST API MCP server. |
+| [`github`](./github) | `/gh-pr-review` (+3) | Review and open pull requests, triage issues, check repo health — via the official GitHub MCP server or the `gh` CLI. |
+| [`gitlab`](./gitlab) | `/gl-mr-review` (+3) | Review and open merge requests, triage issues, watch CI/CD pipelines — via the official GitLab MCP server or the `glab` CLI. |
+| [`huggingface`](./huggingface) | `/hf-model-search` (+3) | Search, vet, and download Hub models and datasets — via the official Hugging Face MCP server or the `hf` CLI. |
+| [`word`](./word) | `/docx-new` (+3) | Create, convert, review, and edit Word documents — via the Office Word MCP server or a pandoc / python-docx fallback. |
+| [`powerpoint`](./powerpoint) | `/pptx-new` (+3) | Build, convert, review, and theme PowerPoint decks — via the Office PowerPoint MCP server or a python-pptx fallback. |
+| [`miro`](./miro) | `/miro-board` (+3) | Create boards, diagrams, and sticky clusters and summarize boards — via Miro's official MCP server or the REST API. |
+
+The last seven are **integration plugins**: each bundles an official MCP server,
+several slash commands, and a methodology skill, and prompts for its config
+(tokens, vault path, output folders) on enable. The Office plugins run their MCP
+server through `uvx` (install `uv`) and fall back to local Python libraries.
+Secrets are stored in secure storage, never in plaintext settings.
 
 ## Adding a new plugin
 
