@@ -7,7 +7,7 @@
 // surface in CI instead.
 
 import { describe, expect, test } from 'bun:test'
-import { readFile } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import {
   PluginManifestSchema,
@@ -15,6 +15,18 @@ import {
 } from '../src/utils/plugins/schemas'
 
 const REPO = join(import.meta.dir, '..')
+
+async function listMarkdownFiles(dir: string): Promise<string[]> {
+  const entries = await readdir(dir, { withFileTypes: true })
+  const files = await Promise.all(
+    entries.map(async entry => {
+      const fullPath = join(dir, entry.name)
+      if (entry.isDirectory()) return listMarkdownFiles(fullPath)
+      return entry.isFile() && entry.name.endsWith('.md') ? [fullPath] : []
+    }),
+  )
+  return files.flat()
+}
 
 describe('repo marketplace tree', () => {
   test('.ur-plugin/marketplace.json parses against PluginMarketplaceSchema', async () => {
@@ -94,7 +106,7 @@ describe('repo marketplace tree', () => {
     }
   })
 
-  test('every plugin ships a same-named markdown command with frontmatter', async () => {
+  test('every plugin command markdown file has frontmatter', async () => {
     const raw = await readFile(
       join(REPO, '.ur-plugin', 'marketplace.json'),
       'utf8',
@@ -106,15 +118,15 @@ describe('repo marketplace tree', () => {
       if (typeof entry.source !== 'string' || !entry.source.startsWith('./')) {
         continue
       }
-      const cmdPath = join(
-        REPO,
-        entry.source,
-        'commands',
-        `${entry.name}.md`,
+      const commandFiles = await listMarkdownFiles(
+        join(REPO, entry.source, 'commands'),
       )
-      const content = await readFile(cmdPath, 'utf8')
-      expect(content.startsWith('---\n')).toBe(true)
-      expect(content).toContain('description:')
+      expect(commandFiles.length).toBeGreaterThan(0)
+      for (const cmdPath of commandFiles) {
+        const content = await readFile(cmdPath, 'utf8')
+        expect(content.startsWith('---\n')).toBe(true)
+        expect(content).toContain('description:')
+      }
     }
   })
 })

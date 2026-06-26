@@ -29,11 +29,11 @@ test('num_ctx caps a large prompt to the model window', () => {
   ).toBe(40960)
 })
 
-test('num_ctx override wins but is capped at the model window', () => {
+test('num_ctx override wins even when detected model window is smaller', () => {
   expect(computeOllamaNumCtx({ override: 16000 })).toBe(16000)
   expect(
     computeOllamaNumCtx({ override: 16000, modelContextLength: 8192 }),
-  ).toBe(8192)
+  ).toBe(16000)
 })
 
 test('num_ctx override of zero disables the setting', () => {
