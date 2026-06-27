@@ -6,6 +6,7 @@ type TrendCoverage = {
   status: TrendStatus
   summary: string
   evidence: string[]
+  references: string[]
   professionalNextStep: string
 }
 
@@ -27,6 +28,7 @@ export type A2AAgentCard = {
   description: string
   url: string
   version: string
+  documentationUrl: string
   capabilities: {
     streaming: boolean
     pushNotifications: boolean
@@ -53,6 +55,21 @@ const urVersion = MACRO.VERSION
 
 const coverage: TrendCoverage[] = [
   {
+    id: 'local-runtime',
+    name: 'Local-first model runtime',
+    status: 'covered',
+    summary:
+      'UR routes all model traffic through the local Ollama app, so local models and Ollama Cloud-backed models exposed by that app share one local endpoint and permission boundary.',
+    evidence: [
+      'fixed local Ollama endpoint',
+      'OLLAMA_MODEL and UR_MODEL selection',
+      'auto-routing over models advertised by the local Ollama app',
+    ],
+    references: ['https://docs.ollama.com/'],
+    professionalNextStep:
+      'Add model capability reporting for tool use, vision, context length, and multimodal readiness.',
+  },
+  {
     id: 'mcp',
     name: 'MCP tool ecosystem',
     status: 'covered',
@@ -63,6 +80,7 @@ const coverage: TrendCoverage[] = [
       'src/services/mcp/*',
       'MCP tools run through the same permission and evidence path as built-in tools',
     ],
+    references: ['https://modelcontextprotocol.io/docs/getting-started/intro'],
     professionalNextStep:
       'Keep server trust UX, registry metadata, and MCP security guidance current as the MCP spec evolves.',
   },
@@ -77,6 +95,7 @@ const coverage: TrendCoverage[] = [
       '/a2a-card',
       'Agent Card describes UR skills, modes, and local-first operating boundary',
     ],
+    references: ['https://a2a-protocol.org/latest/specification/'],
     professionalNextStep:
       'Add a separate opt-in A2A task server when UR should accept remote agent-to-agent task execution.',
   },
@@ -91,6 +110,7 @@ const coverage: TrendCoverage[] = [
       'background task UI and task state',
       'session restore and rewind support',
     ],
+    references: ['https://docs.langchain.com/oss/python/langgraph/overview'],
     professionalNextStep:
       'Expose a documented checkpointed workflow format for repeated multi-step automations.',
   },
@@ -105,6 +125,7 @@ const coverage: TrendCoverage[] = [
       '/verify',
       'custom agents via --agents and .ur assets',
     ],
+    references: ['https://openai.github.io/openai-agents-python/'],
     professionalNextStep:
       'Document reusable team patterns and when to use each role.',
   },
@@ -118,6 +139,10 @@ const coverage: TrendCoverage[] = [
       '/remember, /forget, /memory',
       '.ur/memory/notes.jsonl',
       'team memory sync and auto-dream consolidation services',
+    ],
+    references: [
+      'https://docs.langchain.com/oss/python/langgraph/overview',
+      'https://docs.langchain.com/oss/python/langgraph/memory',
     ],
     professionalNextStep:
       'Add optional local embedding indexes with scope, retention, and deletion guarantees.',
@@ -133,6 +158,7 @@ const coverage: TrendCoverage[] = [
       '/chrome',
       'WebSearch and WebFetch run read-only by default while respecting deny/ask rules',
     ],
+    references: ['https://platform.openai.com/docs/guides/tools-computer-use'],
     professionalNextStep:
       'Add more browser replay fixtures and screenshot assertions for release validation.',
   },
@@ -146,6 +172,10 @@ const coverage: TrendCoverage[] = [
       'WebFetch tool results include Source URL',
       '/cite and /graph research workflows',
       '/trace exposes recent tool calls and results',
+    ],
+    references: [
+      'https://openai.github.io/openai-agents-python/tracing/',
+      'https://modelcontextprotocol.io/docs/getting-started/intro',
     ],
     professionalNextStep:
       'Add a claim-to-source ledger for web/MCP outputs and expose it through /evidence or /trace.',
@@ -161,6 +191,10 @@ const coverage: TrendCoverage[] = [
       '/trace',
       'OpenTelemetry tracing utilities',
     ],
+    references: [
+      'https://openai.github.io/openai-agents-python/tracing/',
+      'https://openai.github.io/openai-agents-python/guardrails/',
+    ],
     professionalNextStep:
       'Publish replayable agent evals for coding, research, browser, MCP, and memory workflows.',
   },
@@ -175,8 +209,30 @@ const coverage: TrendCoverage[] = [
       'Bash and PowerShell static safety validation',
       'WebSearch/WebFetch prompts treat external content as untrusted evidence',
     ],
+    references: [
+      'https://modelcontextprotocol.io/specification/2025-06-18/basic/security_best_practices',
+      'https://openai.github.io/openai-agents-python/guardrails/',
+    ],
     professionalNextStep:
       'Continuously test web/MCP prompt-injection cases in the release suite.',
+  },
+  {
+    id: 'identity-auth',
+    name: 'Agent identity and delegated authorization',
+    status: 'partial',
+    summary:
+      'UR has OAuth, XAA, MCP auth helpers, permissions, and local trust boundaries, but it does not yet expose portable cross-agent identity or attenuated delegation tokens for remote agent collaboration.',
+    evidence: [
+      'MCP OAuth and XAA helpers',
+      'tool permission allow/ask/deny rules',
+      'local-first execution boundary',
+    ],
+    references: [
+      'https://modelcontextprotocol.io/specification/2025-06-18/basic/authorization',
+      'https://a2a-protocol.org/latest/specification/',
+    ],
+    professionalNextStep:
+      'Add an opt-in identity layer only when UR gains a network-facing A2A task adapter.',
   },
   {
     id: 'multimodal',
@@ -185,13 +241,19 @@ const coverage: TrendCoverage[] = [
     summary:
       'UR includes image, video, YouTube, voice, and browser workflows, but polished real-time multimodal agent UX is still provider/model dependent.',
     evidence: ['/image', '/video', '/youtube', '/voice', 'examples/images.md'],
+    references: [
+      'https://platform.openai.com/docs/guides/tools-computer-use',
+      'https://docs.ollama.com/',
+    ],
     professionalNextStep:
       'Add model-aware capability reporting so users know which multimodal modes their local Ollama setup can actually run.',
   },
 ]
 
 const priorityRoadmap = [
+  'Model capability report: detect local Ollama model support for tools, vision, context length, and multimodal workflows.',
   'A2A task-server adapter: opt-in HTTP/JSON-RPC process that accepts remote agent tasks without weakening local CLI permissions.',
+  'Agent identity and delegation: portable auth metadata for any future network-facing A2A adapter.',
   'Checkpointed workflow format: documented graph steps, resume checkpoints, approval points, and verification gates.',
   'Semantic memory: optional local embeddings, project/user scopes, retention policy, and deletion enforcement.',
   'Claim provenance: map final-answer claims to WebSearch/WebFetch/MCP source URLs and show them in trace/evidence output.',
@@ -224,6 +286,8 @@ export function buildA2AAgentCard(
       'Local-first terminal coding agent powered through the local Ollama app, with MCP tools, custom agents, browser workflows, memory, verifier gates, and permission controls.',
     url,
     version: urVersion,
+    documentationUrl:
+      'https://github.com/Maitham16/UR-mapek/blob/master/docs/AGENT_TRENDS.md',
     capabilities: {
       streaming: true,
       pushNotifications: false,
@@ -320,6 +384,7 @@ export function formatAgentTrendReport(
     lines.push(`[${item.status}] ${item.name}`)
     lines.push(`  ${item.summary}`)
     lines.push(`  Evidence: ${item.evidence.join('; ')}`)
+    lines.push(`  References: ${item.references.join(', ')}`)
     lines.push(`  Next: ${item.professionalNextStep}`)
     lines.push('')
   }

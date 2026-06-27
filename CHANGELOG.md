@@ -5,8 +5,10 @@
 ### Added
 - **Agent trend coverage.** New `ur agent-trends` CLI command and
   `/agent-trends` slash command report how UR maps to current agent trends:
-  MCP, A2A, durable workflows, multi-agent orchestration, memory, browser
-  automation, provenance, evals, security, and multimodal workflows.
+  local-first model runtime, MCP, A2A, durable workflows, multi-agent
+  orchestration, memory, browser automation, provenance, evals, security,
+  agent identity, and multimodal workflows. The report includes source
+  references for each trend.
 - **A2A Agent Card export.** New `ur a2a card` CLI command and `/a2a-card`
   slash command print UR Agent Card metadata for discovery by A2A-aware tools.
 - **Professional trend docs.** `docs/AGENT_TRENDS.md` documents the coverage
