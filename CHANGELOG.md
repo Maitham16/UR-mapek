@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.12.1
+
+### Changed
+- **Mashoof spinner.** The activity spinner is now a Mashoof (مشحوف) — the
+  marsh canoe — bobbing on the water. It cycles boat-hull arcs (`⌣ ⏝ ‿`) into
+  a gentle up-down bob loop instead of the old dot→blocks→house growth, and
+  the brightness "breathe" was dropped so it reads as a clean bob.
+
 ## 1.12.0
 
 ### Added
