@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.12.0
+
+### Added
+- **Agent trend coverage.** New `ur agent-trends` CLI command and
+  `/agent-trends` slash command report how UR maps to current agent trends:
+  MCP, A2A, durable workflows, multi-agent orchestration, memory, browser
+  automation, provenance, evals, security, and multimodal workflows.
+- **A2A Agent Card export.** New `ur a2a card` CLI command and `/a2a-card`
+  slash command print UR Agent Card metadata for discovery by A2A-aware tools.
+- **Professional trend docs.** `docs/AGENT_TRENDS.md` documents the coverage
+  matrix, source/trust policy, and prioritized roadmap.
+
+### Changed
+- **Web-source trust guidance.** WebSearch and WebFetch prompts now explicitly
+  treat search results and fetched pages as untrusted evidence, not instruction
+  channels, while preserving source citation requirements.
+
 ## 1.11.3
 
 ### Changed

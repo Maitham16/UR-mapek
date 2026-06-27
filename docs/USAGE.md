@@ -82,6 +82,8 @@ UR includes slash commands and CLI subcommands for common workflows:
 - `ur mcp ...` to configure MCP servers
 - `ur plugin ...` to manage plugins and marketplaces
 - `ur agents` to list configured agents
+- `ur agent-trends` to inspect coverage for current agent technology trends
+- `ur a2a card` to print UR's Agent Card metadata for A2A discovery
 - `ur doctor` to inspect CLI health
 - `ur update` or `ur upgrade` to check for updates
 

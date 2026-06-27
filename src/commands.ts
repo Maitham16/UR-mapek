@@ -61,6 +61,8 @@ import hardenCmd from './commands/harden/index.js'
 import stability from './commands/stability/index.js'
 import evidence from './commands/evidence/index.js'
 import actions from './commands/actions/index.js'
+import agentTrends from './commands/agent-trends/index.js'
+import a2aCard from './commands/a2a-card/index.js'
 import dna from './commands/dna/index.js'
 import osCmd from './commands/os/index.js'
 import workspace from './commands/workspace/index.js'
@@ -356,6 +358,8 @@ const COMMANDS = memoize((): Command[] => [
   stability,
   evidence,
   actions,
+  agentTrends,
+  a2aCard,
   dna,
   osCmd,
   workspace,

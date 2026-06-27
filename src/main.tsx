@@ -4279,6 +4279,35 @@ async function run(): Promise<CommanderCommand> {
     await agentsHandler();
     process.exit(0);
   });
+  program.command('agent-trends').description('Show UR coverage for current agent technology trends').option('--json', 'Output as JSON').option('--a2a-base-url <url>', 'Base URL to include in the embedded A2A Agent Card').action(async (opts: {
+    json?: boolean;
+    a2aBaseUrl?: string;
+  }) => {
+    const {
+      buildAgentTrendReport,
+      formatAgentTrendReport
+    } = await import('./services/agents/trends.js');
+    const report = buildAgentTrendReport({
+      baseUrl: opts.a2aBaseUrl
+    });
+    // biome-ignore lint/suspicious/noConsole:: CLI command output
+    console.log(opts.json ? JSON.stringify(report, null, 2) : formatAgentTrendReport(report));
+    process.exit(0);
+  });
+  const a2a = program.command('a2a').description('A2A interoperability utilities').configureHelp(createSortedHelpConfig());
+  a2a.command('card').description('Print UR Agent Card metadata for A2A discovery').option('--base-url <url>', 'Base URL to use for the Agent Card endpoint').option('--compact', 'Output compact JSON').action(async (opts: {
+    baseUrl?: string;
+    compact?: boolean;
+  }) => {
+    const {
+      formatA2AAgentCard
+    } = await import('./services/agents/trends.js');
+    // biome-ignore lint/suspicious/noConsole:: CLI command output
+    console.log(formatA2AAgentCard({
+      baseUrl: opts.baseUrl
+    }, !opts.compact));
+    process.exit(0);
+  });
   if (feature('TRANSCRIPT_CLASSIFIER')) {
     // Skip when tengu_auto_mode_config.enabled === 'disabled' (circuit breaker).
     // Reads from disk cache — GrowthBook isn't initialized at registration time.
