@@ -57,7 +57,7 @@ function getClipboardCommands() {
   > = {
     darwin: {
       checkImage: `osascript -e 'the clipboard as «class PNGf»'`,
-      saveImage: `osascript -e 'set png_data to (the clipboard as «class PNGf»)' -e 'set fp to open for access POSIX file "${screenshotPath}" with write permission' -e 'write png_data to fp' -e 'close access fp'`,
+      saveImage: `osascript -e 'set png_data to (the clipboard as «class PNGf»)' -e 'set fp to open for access POSIX file "${screenshotPath}" with write permission' -e 'set eof fp to 0' -e 'write png_data to fp' -e 'close access fp'`,
       getPath: `osascript -e 'get POSIX path of (the clipboard as «class furl»)'`,
       deleteFile: `rm -f "${screenshotPath}"`,
     },
