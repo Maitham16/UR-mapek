@@ -2,7 +2,7 @@
 
 UR is a Bun/TypeScript terminal coding agent. It starts an interactive session by default, can run once in print mode for scripts, and supports project context, slash commands, MCP servers, plugins, skills, and custom agents.
 
-The package installs a global `ur` command from this GitHub repository. The launcher requires Bun and sends all model requests to the local Ollama app.
+The package installs a global `ur` command from npm or this GitHub repository. The launcher requires Bun and sends all model requests to the local Ollama app.
 
 ## Requirements
 
@@ -24,12 +24,12 @@ bun remove -g ur-agent
 ### Then, install:
 
 ```sh
-bun add -g github:Maitham16/UR-mapek
+npm install -g ur-agent
 ur --version
 ur
 ```
 
-If you prefer npm for the global install, Bun is still required at runtime:
+If you prefer installing directly from GitHub, Bun is still required at runtime:
 
 ```sh
 npm install -g github:Maitham16/UR-mapek
@@ -134,7 +134,7 @@ bun run release:check
 npm pack --dry-run
 ```
 
-The package is configured for GitHub installation through `github:Maitham16/UR-mapek`. It is not published to the npm registry yet.
+The package is published on npm as `ur-agent` and can also be installed directly from GitHub with `github:Maitham16/UR-mapek`.
 
 ## Designed By
 

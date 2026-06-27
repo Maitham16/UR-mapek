@@ -9,14 +9,15 @@ You need:
 - A running Ollama server (`ollama serve`) with at least one model available
   in the local Ollama app. Local models and Ollama Cloud-backed models both
   work because UR talks to the local app.
-- This repo installed globally (`bun add -g github:Maitham16/UR-mapek`) or a
+- UR installed globally (`npm install -g ur-agent`) or this repo installed
+  globally (`bun add -g github:Maitham16/UR-mapek`) or a
   local checkout (`bun run dev`).
 
 ## 0. Smoke
 
 ```sh
 ur --version
-# expected: 1.11.0 (Ur)
+# expected: 1.11.1 (Ur)
 ```
 
 ## 1. Marketplace tree resolves

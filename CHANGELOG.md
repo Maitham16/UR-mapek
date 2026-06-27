@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.11.1
+
+### Changed
+- **Npm publication docs.** README installation guidance now reflects that
+  `ur-agent` is published on npm, while keeping the GitHub install path for
+  source-based installs.
+
 ## 1.11.0
 
 ### Changed
