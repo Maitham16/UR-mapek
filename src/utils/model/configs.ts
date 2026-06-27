@@ -2,7 +2,7 @@ import type { ModelName } from './model.js'
 import type { APIProvider } from './providers.js'
 
 export type ModelConfig = Record<APIProvider, ModelName>
-const DEFAULT_OLLAMA_MODEL = 'llama3.2'
+const DEFAULT_OLLAMA_MODEL = 'qwen3-coder:480b-cloud'
 
 // @[MODEL LAUNCH]: Add a new UR_*_CONFIG constant here. Double check the correct model strings
 // here since the pattern may change.

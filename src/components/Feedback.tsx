@@ -32,7 +32,7 @@ import TextInput from './TextInput.js';
 
 // This value was determined experimentally by testing the URL length limit
 const GITHUB_URL_LIMIT = 7250;
-const GITHUB_ISSUES_REPO_URL = 'https://github.com/Maitham16/ur-agent/issues';
+const GITHUB_ISSUES_REPO_URL = 'https://github.com/Maitham16/UR-mapek/issues';
 type Props = {
   abortSignal: AbortSignal;
   messages: Message[];

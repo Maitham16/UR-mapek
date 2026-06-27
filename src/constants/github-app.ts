@@ -1,7 +1,7 @@
 export const PR_TITLE = 'Add UR GitHub Workflow'
 
 export const GITHUB_ACTION_SETUP_DOCS_URL =
-  'https://github.com/Maitham16/ur-agent'
+  'https://github.com/Maitham16/UR-mapek'
 
 export const WORKFLOW_CONTENT = `name: UR
 
@@ -37,7 +37,7 @@ jobs:
 
       - name: Run UR
         id: ur
-        uses: Maitham16/ur-agent@v1
+        uses: Maitham16/UR-mapek@v1
         with:
           ur_api_key: \${{ secrets.UR_API_KEY }}
 
@@ -52,7 +52,7 @@ This PR adds a GitHub Actions workflow that enables UR integration in our reposi
 
 ### What is UR?
 
-[UR](https://github.com/Maitham16/ur-agent) is a terminal coding agent that can help with:
+[UR](https://github.com/Maitham16/UR-mapek) is a terminal coding agent that can help with:
 - Bug fixes and improvements
 - Documentation updates
 - Implementing new features
@@ -84,7 +84,7 @@ Once the workflow is triggered, UR will analyze the comment and surrounding cont
 allowed_tools: Bash(npm install),Bash(npm run build),Bash(npm run lint),Bash(npm run test)
 \`\`\`
 
-There's more information in the [UR repository](https://github.com/Maitham16/ur-agent).
+There's more information in the [UR repository](https://github.com/Maitham16/UR-mapek).
 
 After merging this PR, let's try mentioning @ur in a comment on any PR to get started!`
 
@@ -111,10 +111,10 @@ jobs:
 
       - name: Run UR Review
         id: ur-review
-        uses: Maitham16/ur-agent@v1
+        uses: Maitham16/UR-mapek@v1
         with:
           ur_api_key: \${{ secrets.UR_API_KEY }}
-          plugin_marketplaces: 'https://github.com/Maitham16/ur-agent.git'
+          plugin_marketplaces: 'https://github.com/Maitham16/UR-mapek.git'
           plugins: 'code-review@ur-plugins'
           prompt: '/code-review:code-review \${{ github.repository }}/pull/\${{ github.event.pull_request.number }}'
 

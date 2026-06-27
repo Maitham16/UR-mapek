@@ -41,7 +41,7 @@ prompts, so the active session model authors and saves the skill for you.
 3. Replace the example command in `my-plugin/commands/` with your own.
 4. Add an entry to `.ur-plugin/marketplace.json` (sibling to existing
    entries).
-5. Open a PR against `Maitham16/ur-agent`.
+5. Open a PR against `Maitham16/UR-mapek`.
 
 See [`hello/README.md`](./hello/README.md) for the smallest possible example.
 

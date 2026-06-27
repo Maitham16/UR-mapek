@@ -52,7 +52,7 @@ export function createMovedToPluginCommand({
 
 2. After installation, use /${pluginName}:${pluginCommand} to run this command
 
-3. For more information, see: https://github.com/Maitham16/ur-agent/tree/master/${pluginName}/README.md
+3. For more information, see: https://github.com/Maitham16/UR-mapek/tree/master/${pluginName}/README.md
 
 Do not attempt to run the command. Simply inform the user about the plugin installation.`,
           },

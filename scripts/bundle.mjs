@@ -9,8 +9,13 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
-const issues = 'https://github.com/Maitham16/ur-agent/issues'
+const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
+const { name, version } = packageJson
+const packageName = typeof name === 'string' ? name : 'ur-agent'
+const issues =
+  typeof packageJson.bugs?.url === 'string'
+    ? packageJson.bugs.url
+    : 'https://github.com/Maitham16/UR-mapek/issues'
 
 console.log(`Bundling UR v${version} ...`)
 execFileSync(
@@ -29,7 +34,7 @@ execFileSync(
     '--define',
     'MACRO.BUILD_TIME=""',
     '--define',
-    'MACRO.PACKAGE_URL="ur-agent"',
+    `MACRO.PACKAGE_URL="${packageName}"`,
     '--define',
     'MACRO.NATIVE_PACKAGE_URL=undefined',
     '--define',

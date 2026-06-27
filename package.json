@@ -1,17 +1,17 @@
 {
   "name": "ur-agent",
-  "version": "1.10.2",
+  "version": "1.11.0",
   "description": "UR terminal coding agent CLI",
   "type": "module",
   "packageManager": "bun@1.3.14",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Maitham16/ur-agent.git"
+    "url": "git+https://github.com/Maitham16/UR-mapek.git"
   },
   "bugs": {
-    "url": "https://github.com/Maitham16/ur-agent/issues"
+    "url": "https://github.com/Maitham16/UR-mapek/issues"
   },
-  "homepage": "https://github.com/Maitham16/ur-agent#readme",
+  "homepage": "https://github.com/Maitham16/UR-mapek#readme",
   "license": "LicenseRef-UR-Agent-Non-Commercial-Self-Responsibility",
   "keywords": [
     "agent",
@@ -26,6 +26,10 @@
   "files": [
     "bin",
     "dist",
+    "docs",
+    "examples",
+    "CHANGELOG.md",
+    "QUALITY.md",
     "README.md",
     "LICENSE"
   ],
@@ -33,11 +37,13 @@
     "start": "node ./bin/ur.js",
     "dev": "bun --watch run src/entrypoints/cli.tsx",
     "bundle": "node scripts/bundle.mjs",
+    "release:check": "node scripts/release-check.mjs",
     "typecheck": "bun x tsc --noEmit",
     "test": "bun test",
     "smoke": "node ./bin/ur.js --version",
     "secrets:scan": "bash scripts/secret-scan.sh",
-    "package:check": "npm pack --dry-run"
+    "package:check": "node scripts/package-check.mjs",
+    "prepack": "bun run release:check"
   },
   "dependencies": {},
   "devDependencies": {

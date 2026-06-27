@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.11.0
+
+### Changed
+- **Ollama model selection now lets routing work by default.** The launcher no
+  longer forces `OLLAMA_MODEL` when neither `OLLAMA_MODEL` nor `UR_MODEL` is
+  set, so UR's Ollama router can choose from the models exposed by the local
+  Ollama app. The built-in fallback is `qwen3-coder:480b-cloud` when model-list
+  discovery is unavailable.
+- **Repository metadata now matches production.** Package metadata, docs, bundled
+  issue links, marketplace defaults, and GitHub workflow templates now point to
+  `Maitham16/UR-mapek`.
+
+### Added
+- **Release consistency gate.** `bun run release:check` verifies package,
+  `bunfig.toml`, bundled CLI, docs, and launcher version output agree. It also
+  runs automatically from `prepack`.
+- **Quality notes.** `QUALITY.md` documents the release gate, runtime
+  assumptions, safety boundaries, and known limits.
+- **Stronger production CI.** The GitHub workflow now runs typecheck, tests,
+  bundle, smoke, secret scan, release check, package dry-run, and global install
+  verification.
+
+### Fixed
+- **Stale bundle/version drift.** The release process now prevents publishing a
+  package where `package.json`, `dist/cli.js`, `bunfig.toml`, and `ur --version`
+  disagree.
+- **Ollama Cloud wording.** Docs now clarify that UR talks only to the local
+  Ollama app, while models exposed by that app may be local or Ollama
+  Cloud-backed.
+
 ## 1.10.2
 
 ### Fixed

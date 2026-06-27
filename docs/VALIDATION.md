@@ -6,16 +6,17 @@ session. Should take ~10 minutes.
 
 You need:
 
-- A running Ollama server (`ollama serve`) with at least one model pulled,
-  e.g. `ollama pull llama3.2`.
-- This repo installed globally (`bun add -g github:Maitham16/ur-agent`) or a
+- A running Ollama server (`ollama serve`) with at least one model available
+  in the local Ollama app. Local models and Ollama Cloud-backed models both
+  work because UR talks to the local app.
+- This repo installed globally (`bun add -g github:Maitham16/UR-mapek`) or a
   local checkout (`bun run dev`).
 
 ## 0. Smoke
 
 ```sh
 ur --version
-# expected: 1.3.x (Ur)
+# expected: 1.11.0 (Ur)
 ```
 
 ## 1. Marketplace tree resolves
@@ -34,7 +35,7 @@ Then inside:
 
 Expected: the plugin picker lists `ur-plugins-official` and `hello`. If the
 marketplace failed to clone, you'll see no entries — fall back to
-`/plugin marketplace add github:Maitham16/ur-agent` and re-run `/plugin`.
+`/plugin marketplace add github:Maitham16/UR-mapek` and re-run `/plugin`.
 
 Install `hello`:
 
@@ -185,7 +186,7 @@ reminder back.
 ## What to do if any step fails
 
 - Step 1 (marketplace): check `ls ~/.ur/marketplaces/` — `ur-plugins-official`
-  should be there. If absent, `gh repo clone Maitham16/ur-agent` manually
+  should be there. If absent, `gh repo clone Maitham16/UR-mapek` manually
   into `~/.ur/marketplaces/ur-plugins-official` as a fallback.
 - Steps 2-5 (verifier): set `UR_VERIFIER_MODE=off` and re-run to confirm
   the issue is the verifier path, not the rest of the loop. Then file an

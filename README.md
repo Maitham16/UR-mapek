@@ -2,13 +2,13 @@
 
 UR is a Bun/TypeScript terminal coding agent. It starts an interactive session by default, can run once in print mode for scripts, and supports project context, slash commands, MCP servers, plugins, skills, and custom agents.
 
-The package installs a global `ur` command from this GitHub repository. The launcher requires Bun and sets a local Ollama default model if no model is provided.
+The package installs a global `ur` command from this GitHub repository. The launcher requires Bun and sends all model requests to the local Ollama app.
 
 ## Requirements
 
 - Bun. This workspace was verified with Bun 1.3.14.
 - Node.js-compatible shell environment
-- A local Ollama server for model requests at http://localhost:11434/api
+- A local Ollama app/server for model requests at http://localhost:11434/api
 - Optional: GitHub CLI, tmux, and IDE integrations for workflows that use them
 
 ## Install
@@ -36,13 +36,13 @@ npm install -g github:Maitham16/UR-mapek
 ur --version
 ```
 
-If the default model is not available, choose a model explicitly:
+UR auto-routes to an installed Ollama model when possible. If you want a specific model, choose it explicitly:
 
 ```sh
-UR_MODEL=qwen2.5-coder:latest ur
+UR_MODEL=qwen3-coder:480b-cloud ur
 ```
 
-The launch wrapper reads `OLLAMA_MODEL` first, then `UR_MODEL`, and otherwise falls back to `llama3.2`.
+The launch wrapper reads `OLLAMA_MODEL` first, then `UR_MODEL`. If neither is set, UR lets its Ollama router choose from the models exposed by your local Ollama app, including Ollama Cloud-backed models. If routing cannot discover a model list, the built-in fallback is `qwen3-coder:480b-cloud`.
 
 ## Development From Source
 
@@ -88,7 +88,7 @@ ur --resume
 Run with a specific model:
 
 ```sh
-ur --model qwen2.5-coder:latest
+ur --model qwen3-coder:480b-cloud
 ```
 
 See all CLI options and subcommands:
@@ -115,7 +115,7 @@ The software is provided as-is. Users are responsible for reviewing how they run
 
 ## Security
 
-Do not commit secrets, passwords, API keys, OAuth tokens, private keys, `.env` files, local UR memory, generated indexes, logs, or local settings. The package `files` list ships only the runtime source, launcher, docs, examples, and license.
+Do not commit secrets, passwords, API keys, OAuth tokens, private keys, `.env` files, local UR memory, generated indexes, logs, or local settings. The package `files` list ships the launcher, bundled CLI, docs, examples, changelog, quality notes, README, and license.
 
 ## Project Context
 
@@ -125,10 +125,13 @@ UR reads project instructions from `UR.md` files and can load project assets fro
 
 ```sh
 bun run dev
+bun run typecheck
 bun test
-bun run smoke
-npm pack --dry-run
 bun run bundle
+bun run smoke
+bun run secrets:scan
+bun run release:check
+npm pack --dry-run
 ```
 
 The package is configured for GitHub installation through `github:Maitham16/UR-mapek`. It is not published to the npm registry yet.

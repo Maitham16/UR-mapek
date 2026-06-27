@@ -32,11 +32,11 @@ const packageName =
 const issuesUrl =
   typeof packageMetadata.bugs?.url === 'string'
     ? packageMetadata.bugs.url
-    : 'https://github.com/Maitham16/ur-agent/issues'
+    : 'https://github.com/Maitham16/UR-mapek/issues'
 
 const bun = process.env.BUN_BIN || process.env.BUN_EXECUTABLE || 'bun'
 const ollamaModel =
-  process.env.OLLAMA_MODEL || process.env.UR_MODEL || 'qwen3-coder:480b-cloud'
+  process.env.OLLAMA_MODEL || process.env.UR_MODEL
 const userArgs = process.argv.slice(2)
 const args =
   existsSync(bundledEntrypoint)
@@ -67,7 +67,7 @@ const child = spawn(bun, args, {
   cwd: process.cwd(),
   env: {
     ...process.env,
-    OLLAMA_MODEL: ollamaModel,
+    ...(ollamaModel ? { OLLAMA_MODEL: ollamaModel } : {}),
   },
   stdio: 'inherit',
 })

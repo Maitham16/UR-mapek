@@ -4,22 +4,22 @@ UR reads configuration from CLI flags, environment variables, and project or use
 
 ## Model Provider
 
-UR runs models strictly through a local Ollama instance. The request endpoint is fixed and cannot be reconfigured:
+UR runs models strictly through the local Ollama app. The request endpoint is fixed and cannot be reconfigured from UR:
 
 ```text
 http://localhost:11434/api
 ```
 
-Ollama Cloud, remote model endpoints, and model API keys are not supported.
+Any model exposed by that local Ollama app can be used, including local models and Ollama Cloud-backed models. UR does not call remote provider APIs directly and does not manage model API keys.
 
 Model selection environment variables:
 
 ```sh
-OLLAMA_MODEL=qwen2.5-coder:latest
-UR_MODEL=qwen2.5-coder:latest
+OLLAMA_MODEL=qwen3-coder:480b-cloud
+UR_MODEL=qwen3-coder:480b-cloud
 ```
 
-`OLLAMA_MODEL` selects the model name and takes precedence over `UR_MODEL`. Neither variable can change the endpoint.
+`OLLAMA_MODEL` selects the model name and takes precedence over `UR_MODEL`. If neither is set, UR lets its Ollama router choose from the model list advertised by the local Ollama app. If that discovery fails, the built-in fallback is `qwen3-coder:480b-cloud`. Neither variable can change the endpoint.
 
 ## CLI Flags
 

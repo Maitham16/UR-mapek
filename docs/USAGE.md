@@ -13,7 +13,7 @@ Use interactive mode for iterative coding, debugging, research, and repository e
 Useful options:
 
 ```sh
-ur --model qwen2.5-coder:latest
+ur --model qwen3-coder:480b-cloud
 ur --add-dir ../other-project
 ur --permission-mode ask
 ur --continue
@@ -47,20 +47,24 @@ ur -p \
 
 ## Models
 
-The wrapper in `bin/ur.js` sets `OLLAMA_MODEL` from:
+The wrapper in `bin/ur.js` honors explicit model choices in this order:
 
 1. `OLLAMA_MODEL`
 2. `UR_MODEL`
-3. `llama3.2`
+
+If neither variable is set, UR lets its Ollama router choose from the models
+exposed by your local Ollama app. That list can include local models and
+Ollama Cloud-backed models. If routing cannot discover a model list, the
+built-in fallback is `qwen3-coder:480b-cloud`.
 
 You can also choose the model for a single session:
 
 ```sh
-ur --model llama3.2
+ur --model qwen3-coder:480b-cloud
 ur --model qwen2.5-coder:latest
 ```
 
-UR talks to a local Ollama instance at the fixed endpoint `http://localhost:11434/api`. The endpoint cannot be changed, and Ollama Cloud, remote endpoints, and model API keys are not supported.
+UR talks only to the local Ollama app at the fixed endpoint `http://localhost:11434/api`. The endpoint cannot be changed from UR. Models exposed by that local app are valid, including Ollama Cloud-backed models. UR does not call provider APIs directly or manage model API keys.
 
 ## Project Instructions
 

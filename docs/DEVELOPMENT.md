@@ -30,13 +30,16 @@ bun run dev
 ## Verify
 
 ```sh
+bun run typecheck
 bun test
+bun run bundle
 bun run smoke
 bun run secrets:scan
+bun run release:check
 npm pack --dry-run
 ```
 
-`bun run typecheck` and `bun run bundle` are kept as development commands. The GitHub install path uses the bundled launcher in `dist/cli.js`.
+The GitHub install path uses the bundled launcher in `dist/cli.js`, so `bun run bundle` must be run before packaging or pushing a release. `bun run release:check` verifies that `package.json`, `bunfig.toml`, the bundle, docs, and `node ./bin/ur.js --version` agree.
 
 ## Build
 
@@ -44,7 +47,7 @@ npm pack --dry-run
 bun run bundle
 ```
 
-The build output goes to `dist/`, which is ignored by Git.
+The build output goes to `dist/cli.js`. The directory is ignored by default, but `dist/cli.js` is intentionally tracked because GitHub installs run the bundled CLI.
 
 ## Local Command Link
 
@@ -60,7 +63,7 @@ ur --version
 This package is configured for install without cloning:
 
 ```sh
-bun add -g github:Maitham16/ur-agent
+bun add -g github:Maitham16/UR-mapek
 ```
 
 The package exposes the global `ur` command from `bin/ur.js`. That launcher reads `package.json` for version and repository metadata, then runs `src/entrypoints/cli.tsx` with Bun.
