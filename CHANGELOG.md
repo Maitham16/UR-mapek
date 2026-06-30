@@ -5,8 +5,9 @@
 ### Added
 - **Network Ollama discovery.** `ur --discover-ollama` scans active local subnets
   for Ollama servers on port 11434, verifies each via `/api/tags`, and shows an
-  interactive host picker. The chosen host is persisted to user settings under
-  `ollama.host` and used for all subsequent Ollama calls.
+  interactive host picker. The chosen host is used for that session only; plain
+  `ur` continues to default to `localhost:11434` unless `ollama.host` is set
+  explicitly.
 - **`--ollama-host <url>` CLI flag.** Point UR at a specific Ollama server for a
   single session without writing settings.
 - **`ollama` settings block** in `~/.ur/settings.json` with `host` and

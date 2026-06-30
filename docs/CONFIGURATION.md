@@ -50,6 +50,10 @@ UR can scan your active local subnets for other Ollama servers and show a picker
 ur --discover-ollama
 ```
 
+This is **session-only**: the picker appears and the chosen host is used for
+that session, but plain `ur` continues to use `localhost:11434` unless you set
+`ollama.host` explicitly.
+
 To make the picker appear on every startup, enable it in user settings:
 
 ```json

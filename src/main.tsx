@@ -2321,6 +2321,10 @@ async function run(): Promise<CommanderCommand> {
 
       // Discover and choose an Ollama host when requested. Show after setup
       // screens so the user isn't interrupted before trust/onboarding.
+      //
+      // `--discover-ollama` is session-only: it shows the picker every time, but
+      // it does NOT write the choice to settings. Plain `ur` continues to use
+      // localhost unless the user explicitly sets `ollama.host` or `OLLAMA_HOST`.
       if (getAPIProvider() === 'ollama') {
         const ollamaHostOverride = (options as { ollamaHost?: string }).ollamaHost
         if (ollamaHostOverride) {
@@ -2345,12 +2349,9 @@ async function run(): Promise<CommanderCommand> {
               />
             ))
             setOllamaBaseUrlOverride(chosenHost)
-            if (chosenHost) {
-              const existing = getSettingsForSource('userSettings')?.ollama
-              updateSettingsForSource('userSettings', {
-                ollama: { ...existing, host: chosenHost },
-              })
-            }
+            // Note: we intentionally do NOT persist the picked host. Discovery
+            // is a session-level convenience; persistent host configuration
+            // should be set explicitly via settings or OLLAMA_HOST.
           }
         }
       }

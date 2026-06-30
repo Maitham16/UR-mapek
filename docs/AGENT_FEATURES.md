@@ -40,7 +40,7 @@ ur --ollama-host http://192.168.1.50:11434
 
 | Addition | Surface | What it adds |
 | --- | --- | --- |
-| Network Ollama discovery | `ur --discover-ollama`, `ur --ollama-host <url>`, `settings.ollama` | Scans active local subnets for Ollama servers on port 11434, verifies via `/api/tags`, shows a host picker, and persists the chosen host. |
+| Network Ollama discovery | `ur --discover-ollama`, `ur --ollama-host <url>`, `settings.ollama` | Scans active local subnets for Ollama servers on port 11434, verifies via `/api/tags`, and shows a host picker for the current session. |
 
 ## v1.15.0 Additions
 

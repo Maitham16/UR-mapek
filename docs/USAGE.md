@@ -67,17 +67,20 @@ ur --model qwen2.5-coder:latest
 UR talks to the local Ollama app at `http://localhost:11434/api` by default, but you can point it at another Ollama server on your LAN or in another location:
 
 ```sh
-# Discover and pick a LAN Ollama server at startup
+# Discover and pick a LAN Ollama server at startup (session only)
 ur --discover-ollama
 
 # Point to a specific Ollama server for this session
 ur --ollama-host http://192.168.1.50:11434
 
-# Persistent setting
+# Persistent setting (plain `ur` uses this host automatically)
 ur --settings '{"ollama":{"host":"http://192.168.1.50:11434"}}'
 ```
 
 Precedence: `--ollama-host` > `OLLAMA_HOST` env > `ollama.host` setting > `localhost:11434`.
+
+`--discover-ollama` shows the picker every time but does **not** save the choice;
+use `ollama.host` in settings if you want plain `ur` to default to a LAN host.
 
 Models exposed by the chosen Ollama app are valid, including local models and Ollama Cloud-backed models. UR does not call provider APIs directly or manage model API keys.
 

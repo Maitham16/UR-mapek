@@ -2,6 +2,13 @@ import { getSettingsForSource } from '../settings/settings.js'
 
 let sessionOverride: string | undefined
 
+export type OllamaSettingsInput = {
+  ollama?: {
+    host?: string
+    lanDiscovery?: boolean
+  }
+}
+
 function normalizeOllamaBaseUrl(value: string | undefined): string {
   const base = value?.trim() || 'http://localhost:11434'
   const withScheme = /^https?:\/\//.test(base) ? base : `http://${base}`
@@ -19,6 +26,7 @@ function normalizeOllamaBaseUrl(value: string | undefined): string {
  */
 export function getOllamaBaseUrl(
   env: Record<string, string | undefined> = process.env,
+  settings?: OllamaSettingsInput,
 ): string {
   if (sessionOverride) {
     return normalizeOllamaBaseUrl(sessionOverride)
@@ -27,7 +35,10 @@ export function getOllamaBaseUrl(
   if (envHost) {
     return normalizeOllamaBaseUrl(envHost)
   }
-  const settingsHost = getSettingsForSource('userSettings')?.ollama?.host
+  const settingsHost =
+    settings === undefined
+      ? getSettingsForSource('userSettings')?.ollama?.host
+      : settings.ollama?.host
   if (settingsHost) {
     return normalizeOllamaBaseUrl(settingsHost)
   }

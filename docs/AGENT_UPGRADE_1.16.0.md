@@ -20,7 +20,8 @@ a picker with:
 - `This computer` — your local `ollama serve` at `http://localhost:11434`
 - every discovered LAN host and the number of models it advertises
 
-Select a host and UR uses it for the session and persists it to user settings.
+Select a host and UR uses it for that session only. The choice is **not**
+persisted, so plain `ur` continues to use `localhost:11434`.
 
 ### Enable discovery on every startup
 
@@ -34,8 +35,8 @@ Add to `~/.ur/settings.json`:
 }
 ```
 
-The picker still appears even if no LAN hosts are found, so you can confirm the
-local host or manually point to another one.
+The picker appears on every startup. The choice is still session-only and is
+not written to settings.
 
 ### Point to a specific host without scanning
 
