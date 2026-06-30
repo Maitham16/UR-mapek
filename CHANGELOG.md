@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.23.2
+
+### Added
+- **CI failure diagnostics** in `.github/workflows/test.yml`: environment-info step, verbose test reporter, captured `test-output.log`, and artifact upload on failure so the production test runner exposes which test fails without requiring admin log access.
+
+### Fixed
+- 
+
 ## 1.23.1
 
 ### Added

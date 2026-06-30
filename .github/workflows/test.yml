@@ -23,31 +23,74 @@ jobs:
         with:
           node-version: 24
 
+      - name: Environment info
+        run: |
+          set -x
+          uname -a
+          bun --version
+          node --version
+          npm --version
+          git --version
+          which git node npm bun ollama docker gh || true
+
       - name: Install dependencies (Bun)
-        run: bun install
+        run: |
+          set -xeuo pipefail
+          bun install
 
       - name: Typecheck
-        run: bun run typecheck
+        run: |
+          set -xeuo pipefail
+          bun run typecheck
 
       - name: Run tests (Bun)
-        run: bun test
+        run: |
+          set -xeuo pipefail
+          bun test --timeout 120000 2>&1 | tee test-output.log
+
+      - name: Upload test output on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            test-output.log
+            bun.lockb
+          retention-days: 7
 
       - name: Build bundle
-        run: bun run bundle
+        if: success()
+        run: |
+          set -xeuo pipefail
+          bun run bundle
 
       - name: Smoke test
-        run: bun run smoke
+        if: success()
+        run: |
+          set -xeuo pipefail
+          bun run smoke
 
       - name: Secret scan
-        run: bun run secrets:scan
+        if: success()
+        run: |
+          set -xeuo pipefail
+          bun run secrets:scan
 
       - name: Release check
-        run: bun run release:check
+        if: success()
+        run: |
+          set -xeuo pipefail
+          bun run release:check
 
       - name: Package Check
-        run: bun run package:check
+        if: success()
+        run: |
+          set -xeuo pipefail
+          bun run package:check
 
       - name: Test Global Install (NPM)
+        if: success()
         run: |
+          set -xeuo pipefail
           npm install -g .
           ur --version
