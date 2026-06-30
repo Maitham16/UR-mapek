@@ -144,6 +144,9 @@ as first-class subcommands in the shipped CLI.
 | `ur artifacts` | Capture diffs, test runs, notes, and review feedback under `.ur/artifacts/`. |
 | `ur claim-ledger` | Map generated claims to file, web, MCP, tool, or user sources. |
 | `ur browser-qa` | Validate and smoke-run browser QA replay fixtures. |
+| `ur eval run` | Run an eval suite and grade outputs; optionally capture cost/tokens/files/test metrics. |
+| `ur eval report` | Show a saved eval report; `--dashboard` writes a single-suite HTML timeline. |
+| `ur eval dashboard` | Generate the local-first HTML dashboard across all saved reports. |
 | `ur eval bench` | Import local SWE-bench, Terminal-Bench, or Aider Polyglot exports. |
 | `ur model-doctor` | Inspect Ollama models and report likely agent capabilities. |
 | `ur model-route` | Recommend a local model for a task by capability fit. |
@@ -187,6 +190,9 @@ ur artifacts capture-tests --command "bun test"
 ur agent-task pr --create --dry-run
 ur acp serve --port 8123
 ur exec "add tests for the parser" --concurrency 4 --json
+ur eval run starter --metrics --json
+ur eval report starter --dashboard
+ur eval dashboard
 ```
 
 ## Project Context
@@ -296,6 +302,7 @@ CLI. Rebuild it after source, version, or macro changes.
 - [Configuration](docs/CONFIGURATION.md)
 - [Agent Feature Expansion](docs/AGENT_FEATURES.md)
 - [Agent Trend Coverage](docs/AGENT_TRENDS.md)
+- [1.22.0 Upgrade Notes](docs/AGENT_UPGRADE_1.22.0.md)
 - [1.20.0 Upgrade Notes](docs/AGENT_UPGRADE_1.20.0.md)
 - [1.19.0 Upgrade Notes](docs/AGENT_UPGRADE_1.19.0.md)
 - [1.18.0 Upgrade Notes](docs/AGENT_UPGRADE_1.18.0.md)

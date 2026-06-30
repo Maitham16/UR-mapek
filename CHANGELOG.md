@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.22.0
+
+### Added
+- **Agent execution metrics in `ur eval`.** `ur eval run` now captures
+  cost, input/output tokens, model used, API duration, files changed,
+  insertions/deletions, command failures, human-edit heuristics, and optional
+  per-case `testCommand` results. Metrics are written by the headless child
+  via `UR_EVAL_METRICS_FILE`, so future parallel eval runs stay safe.
+- **Richer eval dashboard.** `ur eval dashboard` and
+  `ur eval report <suite> --dashboard` generate local HTML dashboards with
+  summary cards (pass rate, test pass rate, cost, tokens, files changed, command
+  failures, human edits, duration) and a per-case timeline showing model, time,
+  cost, tokens, diffs, test result, and output preview.
+- **Per-case run metrics persistence.** `ur eval run <suite> --metrics` writes
+  each case's metrics to `.ur/evals/.runs/<suite>/<case>.json` for downstream
+  analysis.
+- **Benchmark-style reporting.** `formatEvalReport` prints aggregate cost,
+  tokens, files changed, command failures, human edits, duration, and test pass
+  rate alongside the pass-rate summary.
+
+### Changed
+- **`makeCliEvalRunner` resets cost state per case**, reads child metrics,
+  gathers `git diff --stat` totals, runs `expect.testCommand` when present, and
+  returns an `EvalRunMetrics` object with best-effort command-failure and
+  human-edit counts.
+- **Version bump.** Updated from 1.21.0 to 1.22.0 across `package.json`,
+  `bunfig.toml`, and the VS Code extension manifest.
+
+### Verified
+- Added `test/evalMetrics.test.ts` and `test/evalDashboard.test.ts` covering
+  child metrics serialization, report aggregation, dashboard HTML rendering,
+  HTML escaping, and run-metrics persistence.
+
 ## 1.21.0
 
 ### Added

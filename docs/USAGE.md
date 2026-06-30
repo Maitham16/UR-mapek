@@ -125,6 +125,9 @@ UR includes slash commands and CLI subcommands for common workflows:
 - `ur ide diff ...` to capture editor-readable inline diff bundles
 - `ur acp ...` to start/stop/status the Agent Communication Protocol server for IDE extensions
 - `ur exec ...` to run prompts in non-interactive mode with optional concurrency
+- `ur eval run ...` to run a suite, grade results, and capture execution metrics
+- `ur eval report ...` to show a saved report or write a single-suite dashboard
+- `ur eval dashboard` to generate the local HTML dashboard across all reports
 - `ur eval bench ...` to import local SWE-bench, Terminal-Bench, or Aider Polyglot exports
 - `ur doctor` to inspect CLI health
 - `ur update` or `ur upgrade` to check for updates
@@ -162,6 +165,10 @@ ur repo-edit preview rename oldName --to newName
 ur repo-edit apply rename oldName --to newName --check "bun test"
 ur ide diff capture --title "Working tree review"
 ur eval bench list
+ur eval run starter --dry-run --json
+ur eval run starter --metrics --json
+ur eval report starter --dashboard
+ur eval dashboard
 ```
 
 ## Permissions

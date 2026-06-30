@@ -241,8 +241,8 @@ const commands = [
     name: 'eval',
     category: 'Verification',
     aliases: ['evals'],
-    summary: 'Create, validate, run, and report public agent eval suites with deterministic grading.',
-    examples: ['ur eval init', 'ur eval list', 'ur eval validate starter', 'ur eval run starter --dry-run', 'ur eval report starter'],
+    summary: 'Create, validate, run, and report public agent eval suites with deterministic grading plus execution metrics and a local HTML dashboard.',
+    examples: ['ur eval init', 'ur eval list', 'ur eval validate starter', 'ur eval run starter --dry-run', 'ur eval run starter --metrics --json', 'ur eval report starter --dashboard', 'ur eval dashboard'],
   },
   {
     name: 'goal',
@@ -630,8 +630,8 @@ const examples = [
   },
   {
     title: 'Eval suite',
-    text: 'Create a suite, validate, run offline, then run live.',
-    code: 'ur eval init\nur eval validate starter\nur eval run starter --dry-run\nur eval report starter',
+    text: 'Create a suite, validate, run offline with metrics, then open the dashboard.',
+    code: 'ur eval init\nur eval validate starter\nur eval run starter --dry-run\nur eval run starter --metrics\nur eval report starter --dashboard',
   },
   {
     title: 'Safe automation',

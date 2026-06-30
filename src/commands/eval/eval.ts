@@ -2,6 +2,7 @@ import {
   BENCHMARK_ADAPTERS,
   type BenchmarkAdapterId,
   type EvalReport,
+  evalsDir,
   formatEvalReport,
   formatReliabilityReport,
   formatSuiteValidation,
@@ -18,9 +19,12 @@ import {
   saveReliabilityReport,
   saveReport,
   scaffoldEvals,
+  suiteSlug,
   validateEvalSuite,
   writeDashboard,
 } from '../../services/agents/evals.js'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import type { LocalCommandCall } from '../../types/command.js'
 import { parseArguments } from '../../utils/argumentSubstitution.js'
 import { getCwd } from '../../utils/cwd.js'
@@ -93,6 +97,26 @@ export const call: LocalCommandCall = async (args: string) => {
       type: 'text',
       value: `Wrote eval dashboard to ${path}\nOpen it in a browser (local-first, no network).`,
     }
+  }
+
+  if (command === 'report') {
+    const report = loadReport(cwd, name)
+    if (!report) {
+      return {
+        type: 'text',
+        value: `No saved report for ${name}. Run it first: ur eval run ${name}`,
+      }
+    }
+    if (tokens.includes('--dashboard')) {
+      const { buildDashboardHtml } = await import('../../services/agents/evals.js')
+      const html = buildDashboardHtml([report], [])
+      const dir = join(evalsDir(cwd), '.dashboards')
+      mkdirSync(dir, { recursive: true })
+      const path = join(dir, `${suiteSlug(report.name)}.html`)
+      writeFileSync(path, html)
+      return { type: 'text', value: `Wrote single-suite dashboard to ${path}` }
+    }
+    return { type: 'text', value: formatEvalReport(report, json) }
   }
 
   if (command === 'bench' || command === 'benchmark') {
@@ -193,8 +217,15 @@ export const call: LocalCommandCall = async (args: string) => {
       return { type: 'text', value: formatReliabilityReport(reliability, json) }
     }
 
+    const writeMetrics = tokens.includes('--metrics')
     const report: EvalReport = await runSuite(suite, runner, { category, judge })
     if (!dryRun) saveReport(cwd, report)
+    if (writeMetrics) {
+      const { writeRunMetrics } = await import('../../services/agents/evals.js')
+      for (const item of report.cases) {
+        if (item.metrics) writeRunMetrics(cwd, suite.name, item.id, item.metrics)
+      }
+    }
     if (json) return { type: 'text', value: formatEvalReport(report, true) }
     const header = dryRun ? '(dry run — no model calls; grading exercised offline)\n\n' : ''
     return { type: 'text', value: `${header}${formatEvalReport(report, false)}` }

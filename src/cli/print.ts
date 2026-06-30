@@ -1,7 +1,7 @@
 // @ts-nocheck
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { feature } from 'bun:bundle'
-import { readFile, stat } from 'fs/promises'
+import { readFile, stat, writeFile } from 'fs/promises'
 import { dirname } from 'path'
 import {
   downloadUserSettings,
@@ -296,6 +296,13 @@ import {
   getAllowedChannels,
   setAllowedChannels,
   type ChannelEntry,
+  getTotalCostUSD,
+  getTotalInputTokens,
+  getTotalOutputTokens,
+  getTotalAPIDuration,
+  getModelUsage,
+  getTotalLinesAdded,
+  getTotalLinesRemoved,
 } from 'src/bootstrap/state.js'
 import { runWithWorkload, WORKLOAD_CRON } from 'src/utils/workloadContext.js'
 import type { UUID } from 'crypto'
@@ -971,6 +978,26 @@ export async function runHeadless(
   // tengu_slate_thimble flag controls non-interactive extraction end-to-end.
   if (feature('EXTRACT_MEMORIES') && isExtractModeActive()) {
     await extractMemoriesModule!.drainPendingExtraction()
+  }
+
+  // Serialize eval metrics for the parent runner when running benchmark cases.
+  // The parent sets a unique path per child, so parallel eval runs stay safe.
+  if (process.env.UR_EVAL_METRICS_FILE) {
+    const modelUsage = getModelUsage()
+    const metrics = {
+      costUSD: getTotalCostUSD(),
+      inputTokens: getTotalInputTokens(),
+      outputTokens: getTotalOutputTokens(),
+      model: Object.keys(modelUsage)[0],
+      linesAdded: getTotalLinesAdded(),
+      linesRemoved: getTotalLinesRemoved(),
+      apiDurationMs: getTotalAPIDuration(),
+    }
+    try {
+      await writeFile(process.env.UR_EVAL_METRICS_FILE, JSON.stringify(metrics, null, 2) + '\n')
+    } catch {
+      // ignore metrics write failures; eval runner has parent-side fallbacks
+    }
   }
 
   gracefulShutdownSync(

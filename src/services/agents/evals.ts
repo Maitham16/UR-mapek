@@ -3,6 +3,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  rmSync,
   writeFileSync,
 } from 'node:fs'
 import { join } from 'node:path'
@@ -10,6 +11,16 @@ import { execFileNoThrowWithCwd } from '../../utils/execFileNoThrow.js'
 import { safeParseJSON } from '../../utils/json.js'
 import { parseHeadlessOutput } from './cliStepRunner.js'
 import type { Verdict } from './executor.js'
+import {
+  resetCostState,
+  getTotalCostUSD,
+  getTotalInputTokens,
+  getTotalOutputTokens,
+  getTotalAPIDuration,
+  getModelUsage,
+  getTotalLinesAdded,
+  getTotalLinesRemoved,
+} from '../../bootstrap/state.js'
 
 /**
  * Public agent eval harness.
@@ -42,6 +53,8 @@ export type EvalExpectation = {
   maxSteps?: number
   /** LLM-as-judge rubric; graded by an injected judge runner (reference-free). */
   judge?: string
+  /** Optional command to run after the agent output to verify a patch/test fix. */
+  testCommand?: string
 }
 
 export type EvalCase = {
@@ -93,6 +106,23 @@ export const BENCHMARK_ADAPTERS: BenchmarkAdapterInfo[] = [
 
 export type CheckResult = { name: string; passed: boolean; detail?: string }
 
+export type EvalRunMetrics = {
+  durationMs: number
+  costUSD?: number
+  inputTokens?: number
+  outputTokens?: number
+  model?: string
+  filesChanged?: number
+  insertions?: number
+  deletions?: number
+  testPassed?: boolean
+  testCommand?: string
+  testStdout?: string
+  testStderr?: string
+  commandFailures?: number
+  humanEditsNeeded?: number
+}
+
 export type EvalCaseResult = {
   id: string
   category: string
@@ -101,6 +131,7 @@ export type EvalCaseResult = {
   durationMs: number
   checks: CheckResult[]
   outputPreview: string
+  metrics?: EvalRunMetrics
 }
 
 export type EvalReport = {
@@ -111,13 +142,21 @@ export type EvalReport = {
   failed: number
   passRate: number
   byCategory: Record<string, { passed: number; total: number }>
+  totalDurationMs: number
+  totalCostUSD?: number
+  totalInputTokens?: number
+  totalOutputTokens?: number
+  totalFilesChanged?: number
+  totalCommandFailures?: number
+  totalHumanEditsNeeded?: number
+  testPassRate?: number
   cases: EvalCaseResult[]
 }
 
 /** Run one case and return its raw output. Injected so grading stays offline. */
 export type EvalRunner = (
   evalCase: EvalCase,
-) => Promise<{ output: string; isError?: boolean; trajectory?: string[] }>
+) => Promise<{ output: string; isError?: boolean; trajectory?: string[]; metrics?: EvalRunMetrics }>
 
 /**
  * LLM-as-judge: scores an output against a rubric and returns PASS/FAIL. Injected
@@ -283,6 +322,10 @@ function preview(text: string, max = 160): string {
   return value.length <= max ? value : `${value.slice(0, max)}…`
 }
 
+function sum(nums: (number | undefined)[]): number {
+  return nums.reduce((acc, n) => acc + (n ?? 0), 0)
+}
+
 function buildReport(name: string, cases: EvalCaseResult[]): EvalReport {
   const passed = cases.filter(item => item.passed).length
   const byCategory: Record<string, { passed: number; total: number }> = {}
@@ -291,6 +334,8 @@ function buildReport(name: string, cases: EvalCaseResult[]): EvalReport {
     bucket.total += 1
     if (item.passed) bucket.passed += 1
   }
+  const metrics = cases.map(c => c.metrics)
+  const testRuns = metrics.filter(m => m?.testPassed !== undefined)
   return {
     name,
     generatedAt: new Date().toISOString(),
@@ -299,6 +344,14 @@ function buildReport(name: string, cases: EvalCaseResult[]): EvalReport {
     failed: cases.length - passed,
     passRate: cases.length > 0 ? Number((passed / cases.length).toFixed(2)) : 0,
     byCategory,
+    totalDurationMs: sum(metrics.map(m => m?.durationMs)),
+    totalCostUSD: metrics.length > 0 ? Number(sum(metrics.map(m => m?.costUSD)).toFixed(6)) : undefined,
+    totalInputTokens: sum(metrics.map(m => m?.inputTokens)) || undefined,
+    totalOutputTokens: sum(metrics.map(m => m?.outputTokens)) || undefined,
+    totalFilesChanged: sum(metrics.map(m => m?.filesChanged)) || undefined,
+    totalCommandFailures: sum(metrics.map(m => m?.commandFailures)) || undefined,
+    totalHumanEditsNeeded: sum(metrics.map(m => m?.humanEditsNeeded)) || undefined,
+    testPassRate: testRuns.length > 0 ? Number((testRuns.filter(m => m?.testPassed).length / testRuns.length).toFixed(2)) : undefined,
     cases,
   }
 }
@@ -324,11 +377,13 @@ export async function runSuite(
     let output = ''
     let isError = false
     let trajectory: string[] | undefined
+    let metrics: EvalRunMetrics | undefined
     try {
       const run = await runner(evalCase)
       output = run.output
       isError = run.isError === true
       trajectory = run.trajectory
+      metrics = run.metrics
     } catch (error) {
       output = error instanceof Error ? error.message : String(error)
       isError = true
@@ -361,6 +416,7 @@ export async function runSuite(
       durationMs: Date.now() - started,
       checks,
       outputPreview: preview(output),
+      metrics,
     })
   }
   return buildReport(suite.name, results)
@@ -450,9 +506,117 @@ export type CliEvalRunnerOptions = {
   timeoutMs?: number
 }
 
+type ChildMetrics = {
+  costUSD?: number
+  inputTokens?: number
+  outputTokens?: number
+  model?: string
+  linesAdded?: number
+  linesRemoved?: number
+  apiDurationMs?: number
+}
+
+function metricsFile(): string {
+  return join(process.env.UR_EVAL_METRICS_DIR ?? process.cwd(), `.ur-eval-metrics-${process.pid}.json`)
+}
+
+function readChildMetricsFile(path: string): ChildMetrics | undefined {
+  if (!existsSync(path)) return undefined
+  try {
+    const parsed = safeParseJSON(readFileSync(path, 'utf-8'), false)
+    if (parsed && typeof parsed === 'object') return parsed as ChildMetrics
+  } catch {
+    // ignore
+  }
+  return undefined
+}
+
+function deleteChildMetricsFile(path: string): void {
+  try {
+    rmSync(path, { force: true })
+  } catch {
+    // ignore
+  }
+}
+
+async function gitDiffStats(cwd: string): Promise<{ filesChanged: number; insertions: number; deletions: number }> {
+  const result = await execFileNoThrowWithCwd(
+    'git',
+    ['diff', '--stat'],
+    { cwd, timeout: 30_000, preserveOutputOnError: true },
+  )
+  if (result.code !== 0 || !result.stdout.trim()) {
+    return { filesChanged: 0, insertions: 0, deletions: 0 }
+  }
+  let filesChanged = 0
+  let insertions = 0
+  let deletions = 0
+  for (const line of result.stdout.trim().split('\n')) {
+    if (line.includes('|')) {
+      filesChanged += 1
+      const match = line.match(/(\d+)\s*insertion|\+(\d+)|(\d+)\s*deletion|-(\d+)/g)
+      if (match) {
+        for (const token of match) {
+          const num = Number(token.replace(/[^0-9]/g, ''))
+          if (Number.isNaN(num)) continue
+          if (token.includes('insertion') || token.includes('+')) insertions += num
+          if (token.includes('deletion') || token.includes('-')) deletions += num
+        }
+      }
+    }
+  }
+  return { filesChanged, insertions, deletions }
+}
+
+async function runTestCommand(
+  cwd: string,
+  command: string,
+): Promise<{ testPassed: boolean; testStdout: string; testStderr: string }> {
+  const result = await execFileNoThrowWithCwd('sh', ['-c', command], {
+    cwd,
+    timeout: 5 * 60_000,
+    preserveOutputOnError: true,
+  })
+  return {
+    testPassed: result.code === 0,
+    testStdout: result.stdout,
+    testStderr: result.stderr || result.error || '',
+  }
+}
+
+function countCommandFailures(output: string): number {
+  const markers = ['[ERROR]', 'Command failed', 'exit code 1', 'Error:', 'FAILED']
+  let count = 0
+  const lower = output.toLowerCase()
+  for (const marker of markers) {
+    const re = new RegExp(marker.replace(/\[/g, '\\[').replace(/\]/g, '\\]').toLowerCase(), 'g')
+    const matches = lower.match(re)
+    if (matches) count += matches.length
+  }
+  return count
+}
+
+function countHumanEdits(output: string): number {
+  const markers = ['human edit', 'manual edit', 'needs edit', 'needs human', 'human intervention', 'cannot proceed']
+  let count = 0
+  const lower = output.toLowerCase()
+  for (const marker of markers) {
+    const re = new RegExp(marker.toLowerCase(), 'g')
+    const matches = lower.match(re)
+    if (matches) count += matches.length
+  }
+  return count
+}
+
+function firstModelName(modelUsage: { [modelName: string]: { inputTokens: number } }): string | undefined {
+  const names = Object.keys(modelUsage)
+  return names.length > 0 ? names[0] : undefined
+}
+
 /** Production runner: each case spawns a headless `ur -p` and is graded. */
 export function makeCliEvalRunner(options: CliEvalRunnerOptions): EvalRunner {
   return async (evalCase: EvalCase) => {
+    resetCostState()
     const file = process.execPath
     const baseArgs = [process.argv[1] ?? '']
     const args = [...baseArgs, '-p', '--output-format', 'json']
@@ -463,14 +627,51 @@ export function makeCliEvalRunner(options: CliEvalRunnerOptions): EvalRunner {
       args.push('--dangerously-skip-permissions')
     }
     args.push(evalCase.prompt)
+
+    const childMetricsPath = metricsFile()
     const result = await execFileNoThrowWithCwd(file, args, {
       cwd: options.cwd,
       timeout: options.timeoutMs ?? 30 * 60 * 1000,
       preserveOutputOnError: true,
+      env: {
+        ...process.env,
+        UR_EVAL_METRICS_FILE: childMetricsPath,
+      },
     })
     const output =
       parseHeadlessOutput(result.stdout) || result.stderr || result.error || ''
-    return { output, isError: result.code !== 0 }
+
+    const childMetrics = readChildMetricsFile(childMetricsPath)
+    deleteChildMetricsFile(childMetricsPath)
+
+    const diffStats = await gitDiffStats(options.cwd)
+    let testResult:
+      | { testPassed: boolean; testStdout: string; testStderr: string; testCommand: string }
+      | undefined
+    if (evalCase.expect.testCommand) {
+      const ran = await runTestCommand(options.cwd, evalCase.expect.testCommand)
+      testResult = { ...ran, testCommand: evalCase.expect.testCommand }
+    }
+
+    const modelUsage = getModelUsage()
+    const metrics: EvalRunMetrics = {
+      durationMs: 0,
+      costUSD: childMetrics?.costUSD ?? getTotalCostUSD(),
+      inputTokens: childMetrics?.inputTokens ?? getTotalInputTokens(),
+      outputTokens: childMetrics?.outputTokens ?? getTotalOutputTokens(),
+      model: childMetrics?.model ?? firstModelName(modelUsage),
+      filesChanged: diffStats.filesChanged,
+      insertions: diffStats.insertions + (childMetrics?.linesAdded ?? getTotalLinesAdded()),
+      deletions: diffStats.deletions + (childMetrics?.linesRemoved ?? getTotalLinesRemoved()),
+      testPassed: testResult?.testPassed,
+      testCommand: testResult?.testCommand,
+      testStdout: testResult?.testStdout,
+      testStderr: testResult?.testStderr,
+      commandFailures: countCommandFailures(output),
+      humanEditsNeeded: countHumanEdits(output),
+    }
+
+    return { output, isError: result.code !== 0, metrics }
   }
 }
 
@@ -517,12 +718,58 @@ function escapeHtml(text: string): string {
     .replace(/"/g, '&quot;')
 }
 
+function num(n: number | undefined, fallback = '—'): string {
+  return typeof n === 'number' ? String(n) : fallback
+}
+
+function fmtUsd(n: number | undefined): string {
+  return typeof n === 'number' ? `$${n.toFixed(6)}` : '—'
+}
+
 /** Pure HTML builder for the local eval dashboard. No network, no inline data leaks. */
 export function buildDashboardHtml(
   reports: EvalReport[],
   reliability: ReliabilityReport[] = [],
 ): string {
   const generatedAt = new Date().toISOString()
+  const summaryCards = (report: EvalReport): string => {
+    const cards = [
+      ['Pass rate', `${Math.round(report.passRate * 100)}%`],
+      ['Test pass rate', report.testPassRate !== undefined ? `${Math.round(report.testPassRate * 100)}%` : '—'],
+      ['Cost', fmtUsd(report.totalCostUSD)],
+      ['Tokens', `${num(report.totalInputTokens)} / ${num(report.totalOutputTokens)}`],
+      ['Files changed', num(report.totalFilesChanged)],
+      ['Command failures', num(report.totalCommandFailures)],
+      ['Human edits', num(report.totalHumanEditsNeeded)],
+      ['Duration', `${num(report.totalDurationMs, '0')}ms`],
+    ]
+    return `<div class="cards">${cards.map(([label, value]) => `<div class="card"><div class="val">${escapeHtml(value)}</div><div class="label">${escapeHtml(label)}</div></div>`).join('')}</div>`
+  }
+  const timelineRow = (c: EvalCaseResult): string => {
+    const m = c.metrics
+    const testBadge =
+      m?.testPassed === true
+        ? '<span class="badge ok">test pass</span>'
+        : m?.testPassed === false
+          ? '<span class="badge bad">test fail</span>'
+          : ''
+    return (
+      `<tr class="${c.passed ? 'ok' : 'bad'}">` +
+      `<td>${c.passed ? '✓' : '✗'}</td>` +
+      `<td>${escapeHtml(c.id)}</td>` +
+      `<td>${escapeHtml(c.category)}</td>` +
+      `<td>${escapeHtml(m?.model ?? '—')}</td>` +
+      `<td>${num(c.durationMs)}ms</td>` +
+      `<td>${fmtUsd(m?.costUSD)}</td>` +
+      `<td>${num(m?.inputTokens)} / ${num(m?.outputTokens)}</td>` +
+      `<td>${num(m?.filesChanged)} <span class="muted">+${num(m?.insertions)} −${num(m?.deletions)}</span></td>` +
+      `<td>${testBadge}</td>` +
+      `<td>${num(m?.commandFailures)}</td>` +
+      `<td>${m?.humanEditsNeeded ? `<span class="badge warn">${m.humanEditsNeeded}</span>` : '—'}</td>` +
+      `<td><code>${escapeHtml(c.outputPreview.slice(0, 60))}</code></td>` +
+      `</tr>`
+    )
+  }
   const card = (report: EvalReport): string => {
     const pct = Math.round(report.passRate * 100)
     const cats = Object.entries(report.byCategory)
@@ -532,19 +779,14 @@ export function buildDashboardHtml(
           `<tr><td>${escapeHtml(cat)}</td><td>${b.passed}/${b.total}</td></tr>`,
       )
       .join('')
-    const rows = report.cases
-      .map(
-        c =>
-          `<tr class="${c.passed ? 'ok' : 'bad'}"><td>${c.passed ? '✓' : '✗'}</td>` +
-          `<td>${escapeHtml(c.id)}</td><td>${escapeHtml(c.category)}</td>` +
-          `<td>${c.durationMs}ms</td><td>${escapeHtml(c.outputPreview)}</td></tr>`,
-      )
-      .join('')
+    const rows = report.cases.map(timelineRow).join('')
     return (
       `<section><h2>${escapeHtml(report.name)} — ${report.passed}/${report.total} (${pct}%)</h2>` +
       `<p class="muted">generated ${escapeHtml(report.generatedAt)}</p>` +
+      `${summaryCards(report)}` +
       `<table class="cats"><thead><tr><th>category</th><th>pass</th></tr></thead><tbody>${cats}</tbody></table>` +
-      `<table class="cases"><thead><tr><th></th><th>case</th><th>category</th><th>time</th><th>output</th></tr></thead>` +
+      `<h3>Task timeline</h3>` +
+      `<table class="cases timeline"><thead><tr><th></th><th>case</th><th>category</th><th>model</th><th>time</th><th>cost</th><th>tokens</th><th>files</th><th>test</th><th>cmd fail</th><th>human</th><th>output</th></tr></thead>` +
       `<tbody>${rows}</tbody></table></section>`
     )
   }
@@ -574,12 +816,20 @@ export function buildDashboardHtml(
 <style>
   :root { color-scheme: light dark; }
   body { font: 14px/1.5 ui-sans-serif, system-ui, sans-serif; margin: 2rem; max-width: 1100px; }
-  h1 { margin: 0 0 .25rem; } .muted { color: #888; font-size: 12px; }
+  h1, h2, h3 { margin: 0 0 .25rem; } h3 { margin-top: 1.25rem; font-size: 1rem; } .muted { color: #888; font-size: 12px; }
   section { margin: 1.5rem 0; padding: 1rem; border: 1px solid #8884; border-radius: 8px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: .75rem; margin: .75rem 0 1rem; }
+  .card { padding: .75rem; border: 1px solid #8883; border-radius: 6px; text-align: center; }
+  .card .val { font-size: 1.15rem; font-weight: 600; }
+  .card .label { font-size: .75rem; color: #888; text-transform: uppercase; letter-spacing: .02em; }
   table { border-collapse: collapse; width: 100%; margin-top: .5rem; }
   th, td { text-align: left; padding: .25rem .5rem; border-bottom: 1px solid #8882; vertical-align: top; }
   table.cats { width: auto; } td:last-child { color: #777; }
   tr.bad td:first-child { color: #c0392b; } tr.ok td:first-child { color: #27ae60; }
+  .badge { font-size: .75rem; padding: .1rem .35rem; border-radius: 4px; }
+  .badge.ok { background: #27ae601a; color: #27ae60; }
+  .badge.bad { background: #c0392b1a; color: #c0392b; }
+  .badge.warn { background: #f1c40f1a; color: #bfa30b; }
   code { background: #8881; padding: 0 .25rem; border-radius: 4px; }
 </style></head>
 <body><h1>UR Eval Dashboard</h1><p class="muted">generated ${escapeHtml(generatedAt)} · local-first, no network</p>
@@ -626,6 +876,35 @@ export function writeDashboard(cwd: string): string {
   return path
 }
 
+function runsDir(cwd: string, suiteName: string): string {
+  return join(evalsDir(cwd), '.runs', suiteSlug(suiteName))
+}
+
+export function writeRunMetrics(
+  cwd: string,
+  suiteName: string,
+  caseId: string,
+  metrics: EvalRunMetrics,
+): string {
+  const dir = runsDir(cwd, suiteName)
+  mkdirSync(dir, { recursive: true })
+  const path = join(dir, `${caseId}.json`)
+  writeFileSync(path, `${JSON.stringify(metrics, null, 2)}\n`)
+  return path
+}
+
+export function loadRunMetrics(
+  cwd: string,
+  suiteName: string,
+  caseId: string,
+): EvalRunMetrics | null {
+  const path = join(runsDir(cwd, suiteName), `${caseId}.json`)
+  if (!existsSync(path)) return null
+  const parsed = safeParseJSON(readFileSync(path, 'utf-8'), false)
+  if (!parsed || typeof parsed !== 'object') return null
+  return parsed as EvalRunMetrics
+}
+
 export function formatReliabilityReport(report: ReliabilityReport, json: boolean): string {
   if (json) return JSON.stringify(report, null, 2)
   const lines = [
@@ -649,7 +928,7 @@ function resultsDir(cwd: string): string {
   return join(evalsDir(cwd), '.results')
 }
 
-function suiteSlug(name: string): string {
+export function suiteSlug(name: string): string {
   return name.trim().toLowerCase().replace(/[^a-z0-9-_]+/g, '-').slice(0, 64)
 }
 
@@ -1039,8 +1318,21 @@ export function formatEvalReport(report: EvalReport, json: boolean): string {
   const lines = [
     `Eval report: ${report.name}`,
     `Pass rate: ${report.passed}/${report.total} (${pct}%)`,
+    report.testPassRate !== undefined
+      ? `Test pass rate: ${Math.round(report.testPassRate * 100)}%`
+      : null,
+    report.totalCostUSD !== undefined ? `Cost: $${report.totalCostUSD.toFixed(6)}` : null,
+    report.totalInputTokens !== undefined || report.totalOutputTokens !== undefined
+      ? `Tokens: ${report.totalInputTokens ?? 0} in / ${report.totalOutputTokens ?? 0} out`
+      : null,
+    report.totalFilesChanged !== undefined ? `Files changed: ${report.totalFilesChanged}` : null,
+    report.totalCommandFailures !== undefined ? `Command failures: ${report.totalCommandFailures}` : null,
+    report.totalHumanEditsNeeded !== undefined
+      ? `Human edits needed: ${report.totalHumanEditsNeeded}`
+      : null,
+    report.totalDurationMs > 0 ? `Duration: ${report.totalDurationMs}ms` : null,
     '',
-  ]
+  ].filter((line): line is string => line !== null)
   const categories = Object.entries(report.byCategory).sort((a, b) =>
     a[0].localeCompare(b[0]),
   )

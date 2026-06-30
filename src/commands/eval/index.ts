@@ -7,7 +7,7 @@ const evals = {
   description:
     'Public agent eval harness: init, list, validate, run, report, benchmark adapters',
   argumentHint:
-    '[init|list|validate|run|report|bench] [suite|adapter] [--file <jsonl>] [--dry-run] [--category <c>] [--json]',
+    '[init|list|validate|run|report|bench] [suite|adapter] [--file <jsonl>] [--dry-run] [--category <c>] [--json] [--metrics] [--dashboard]',
   supportsNonInteractive: true,
   load: () => import('./eval.js'),
 } satisfies Command
