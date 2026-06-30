@@ -1,7 +1,7 @@
 # UR Agent code feature inventory
 
 This file is a code-derived inventory of what this agent can do in the
-`ur-agent` 1.18.0 source tree. It is meant to cover behavior that is easy to
+`ur-agent` 1.19.0 source tree. It is meant to cover behavior that is easy to
 miss in user-facing documentation.
 
 Sources traced include:
@@ -181,6 +181,13 @@ The CLI registers these top-level command families in `src/main.tsx`:
 - `ci-loop` / `heal`: self-healing build/test loop with bounded fix attempts.
 - `test-first` / `quality-loop` / `tf-loop`: stack-aware compile/test/lint
   loop with failure traces and `.ur/verify.json` gate installation.
+- `safety` / `safety-policy`: inspect project shell safety policy, initialize
+  `.ur/safety-policy.json`, and evaluate commands for read/write/execute/network
+  permission class, destructive-command approval, sandbox posture, and secret
+  exfiltration denial.
+- `context-pack` / `project-manifest` / `ctx-pack`: write
+  `.ur/project-manifest.json`, summarize repository architecture under
+  `.ur/context/architecture.md`, record task memory, and compress context.
 - `artifacts` / `artifact`: create, review, approve, reject, and capture
   deliverables; comments can steer linked background tasks.
 - `trigger` / `mention`: parse webhook payloads and optionally launch a run.
@@ -245,6 +252,7 @@ Code-visible slash command names include:
 - `compliance`
 - `config`
 - `context`
+- `context-pack`
 - `convert`
 - `copy`
 - `cost`
@@ -321,6 +329,7 @@ Code-visible slash command names include:
 - `role-mode`
 - `route`
 - `sandbox`
+- `safety`
 - `scope`
 - `sdk`
 - `search`
@@ -626,6 +635,12 @@ The verifier service in `src/services/verifier/**` includes:
   - bounded fix-runner retries
   - failure traces under `.ur/test-first/traces/`
   - gate installation into `.ur/verify.json`
+- Project context pack under `src/services/context/projectContextManifest.ts`:
+  - manifest generation from package scripts, Project DNA, instruction files,
+    `.ur/verify.json`, `.ur/safety-policy.json`, and other project manifests
+  - architecture summary under `.ur/context/architecture.md`
+  - task memory JSONL for decisions, constraints, commands, diffs, and notes
+  - compressed task context under `.ur/context/compressed.md`
 - Loop detection.
 - Rejection cap.
 - Optional L2 verification subagent through env opt-in.
@@ -646,6 +661,16 @@ Permission modes:
 Permission features:
 
 - Tool-level allow, deny, and ask rules.
+- Project shell safety policy under `src/services/safety/projectSafety.ts`.
+- Command permission classes: read, write, execute, and network.
+- `ur safety check --command <cmd>` previews safety behavior before execution.
+- Bash command permission checks consult the project safety policy before broad
+  sandbox auto-allow and exact allow rules.
+- Destructive commands such as recursive remove, hard reset, git clean, forced
+  push, recursive chmod/chown, filesystem formatting, infrastructure destroy,
+  and cluster delete require approval.
+- Secret exfiltration patterns deny common secret-file reads into transcript
+  and likely secret values sent to remote sinks.
 - MCP server/tool permission rules.
 - CLI, command, session, user, project, local, and managed setting sources.
 - Permission request hooks.

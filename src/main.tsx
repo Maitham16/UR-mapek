@@ -4597,6 +4597,26 @@ async function run(): Promise<CommanderCommand> {
     const args = [action, opts.maxAttempts ? `--max-attempts ${opts.maxAttempts}` : undefined, opts.installGates ? '--install-gates' : undefined, opts.dryRun ? '--dry-run' : undefined, opts.skipPermissions ? '--skip-permissions' : undefined, opts.maxTurns ? `--max-turns ${opts.maxTurns}` : undefined, opts.json ? '--json' : undefined].filter(Boolean).join(' ');
     await runLocalTextCommand(() => import('./commands/test-first/test-first.js'), args);
   });
+  program.command('safety [action] [rest...]').alias('safety-policy').description('Inspect project shell safety policy, initialize .ur/safety-policy.json, and evaluate risky commands').option('--command <cmd>', 'Command to evaluate with the project safety policy').option('--json', 'Output as JSON').action(async (action: string | undefined, rest: string[] = [], opts: {
+    command?: string;
+    json?: boolean;
+  }) => {
+    const args = [action, ...rest, opts.command ? `--command ${quoteLocalCommandArg(opts.command)}` : undefined, opts.json ? '--json' : undefined].filter(Boolean).join(' ');
+    await runLocalTextCommand(() => import('./commands/safety/safety.js'), args);
+  });
+  program.command('context-pack [action] [rest...]').alias('project-manifest').alias('ctx-pack').description('Summarize repo architecture, maintain task memory, and compress project context under .ur/').option('--type <kind>', 'Memory kind: decision|constraint|command|diff|note').option('--text <text>', 'Memory text for remember').option('--decision <text>', 'Remember a decision').option('--constraint <text>', 'Remember a constraint').option('--command <cmd>', 'Remember a command').option('--diff <text>', 'Remember a diff summary').option('--note <text>', 'Remember a note').option('--json', 'Output as JSON').action(async (action: string | undefined, rest: string[] = [], opts: {
+    type?: string;
+    text?: string;
+    decision?: string;
+    constraint?: string;
+    command?: string;
+    diff?: string;
+    note?: string;
+    json?: boolean;
+  }) => {
+    const args = [action, ...rest, opts.type ? `--type ${quoteLocalCommandArg(opts.type)}` : undefined, opts.text ? `--text ${quoteLocalCommandArg(opts.text)}` : undefined, opts.decision ? `--decision ${quoteLocalCommandArg(opts.decision)}` : undefined, opts.constraint ? `--constraint ${quoteLocalCommandArg(opts.constraint)}` : undefined, opts.command ? `--command ${quoteLocalCommandArg(opts.command)}` : undefined, opts.diff ? `--diff ${quoteLocalCommandArg(opts.diff)}` : undefined, opts.note ? `--note ${quoteLocalCommandArg(opts.note)}` : undefined, opts.json ? '--json' : undefined].filter(Boolean).join(' ');
+    await runLocalTextCommand(() => import('./commands/context-pack/context-pack.js'), args);
+  });
   program.command('artifacts [action] [id]').alias('artifact').description('Reviewable deliverables (plans, diffs, test runs) with approve/reject/feedback under .ur/artifacts').option('--kind <kind>', 'Artifact kind: plan|diff|test-run|screenshot|browser-recording|note').option('--title <text>', 'Artifact title').option('--body <text>', 'Inline artifact body').option('--file <path>', 'Attach an existing file as the artifact body').option('--summary <text>', 'Short summary line').option('--feedback <text>', 'Feedback text for reject/feedback/comment').option('--task <id>', 'Background task id to steer when adding feedback').option('--command <cmd>', 'Command for capture-tests (default "bun test")').option('--json', 'Output as JSON').action(async (action: string | undefined, id: string | undefined, opts: {
     kind?: string;
     title?: string;

@@ -12,6 +12,11 @@ UR plans, reads files, edits, and can run tests. Safety + stability:
 - Stack-aware quality loops can use `ur test-first`: detect compile/test/lint
   commands, store failed command traces, and install the same commands as
   after-edit verifier gates.
+- Risky commands can be previewed with `ur safety`: classify read/write/execute
+  and network permission, require approval for destructive operations, and
+  block common secret exfiltration paths.
+- Architecture context can be preserved with `ur context-pack`: scan manifests,
+  record decisions/constraints/commands/diffs, and compress old context.
 - Edits are diffable: `/diff` shows uncommitted changes; `/rewind` rolls back.
 - Every tool call is recorded to `.ur/actions.jsonl` — see `/actions`, `/evidence`.
 - `/stability metrics` and `/stability firewall` surface oscillation, repeated
@@ -26,4 +31,8 @@ ur repo-edit apply rename oldName --to newName --check "bun test"
 ur test-first detect
 ur test-first --dry-run
 ur test-first install
+ur safety check --command "rm -rf build"
+ur context-pack scan
+ur context-pack remember --diff "Added the health route and tests"
+ur context-pack compress
 ```

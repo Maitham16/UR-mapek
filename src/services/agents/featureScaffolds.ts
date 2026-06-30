@@ -23,6 +23,8 @@ export type AgentFeatureId =
   | 'goals'
   | 'sdk'
   | 'test-first-loop'
+  | 'permission-safety'
+  | 'context-pack'
 
 type FeatureStatus = 'command' | 'workflow' | 'scaffold' | 'documented'
 
@@ -229,6 +231,24 @@ export const AGENT_FEATURES: AgentFeature[] = [
     command: 'ur test-first detect|run|install',
     summary:
       'Detects project compile/test/lint commands, runs them as command evidence, stores failed traces, and can install the same command set into .ur/verify.json.',
+  },
+  {
+    id: 'permission-safety',
+    name: 'Permission and safety policy',
+    status: 'command',
+    command: 'ur safety status|init|check',
+    summary:
+      'Separates read/write/execute/network command permissions, asks before destructive commands, recommends sandboxing for risky operations, and blocks common secret exfiltration paths.',
+    scaffold: '.ur/safety-policy.json',
+  },
+  {
+    id: 'context-pack',
+    name: 'Project context pack',
+    status: 'command',
+    command: 'ur context-pack scan|remember|compress',
+    summary:
+      'Summarizes repository architecture from manifests and instructions, records task decisions/constraints/commands/diffs, and compresses older task context under .ur/context.',
+    scaffold: '.ur/context/',
   },
 ]
 

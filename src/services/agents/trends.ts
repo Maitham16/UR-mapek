@@ -236,6 +236,44 @@ const coverage: TrendCoverage[] = [
       'Add per-package command plans for large monorepos with multiple quality stacks.',
   },
   {
+    id: 'permission-safety',
+    name: 'Permission and safety policy',
+    status: 'covered',
+    summary:
+      'UR applies a project shell safety policy before broad command approvals: read/write/execute/network classes are separated, destructive commands require approval, risky operations are sandbox-recommended, and common secret exfiltration paths are denied.',
+    evidence: [
+      'ur safety status|init|check',
+      '.ur/safety-policy.json',
+      'Bash permission integration before sandbox auto-allow',
+      'secret-file and secret-like environment exfiltration deny rules',
+    ],
+    references: [
+      'https://modelcontextprotocol.io/specification/2025-06-18/basic/security_best_practices',
+      'https://openai.github.io/openai-agents-python/guardrails/',
+    ],
+    professionalNextStep:
+      'Add OS-specific sandbox attestation to command evidence so every risky command records which sandbox was active.',
+  },
+  {
+    id: 'context-management',
+    name: 'Project context management',
+    status: 'covered',
+    summary:
+      'UR can build a project manifest from repository manifests, instruction files, Project DNA, and verify/safety config; it also records decisions, constraints, commands, and diffs into durable task memory and writes compressed context summaries.',
+    evidence: [
+      'ur context-pack scan',
+      'ur context-pack remember --decision|--constraint|--command|--diff',
+      'ur context-pack compress',
+      '.ur/project-manifest.json and .ur/context/*',
+    ],
+    references: [
+      'https://docs.langchain.com/oss/python/langgraph/overview',
+      'https://docs.langchain.com/oss/python/langgraph/memory',
+    ],
+    professionalNextStep:
+      'Feed the generated project manifest directly into subagent prompts and verifier gate selection.',
+  },
+  {
     id: 'security',
     name: 'Agent security and prompt-injection resistance',
     status: 'covered',

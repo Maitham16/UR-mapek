@@ -143,6 +143,48 @@ before the agent can declare the task complete. A failing command surfaces
 to the model as a structured reminder with the command name and the trimmed
 stdout/stderr.
 
+## Project Safety Policy
+
+`ur safety` exposes the project shell safety policy:
+
+```sh
+ur safety status
+ur safety init
+ur safety check --command "rm -rf build"
+```
+
+The default policy separates command behavior into read, write, execute, and
+network permission classes. It asks before destructive operations, recommends
+sandboxing for write/execute/network commands, and denies common secret-file or
+secret-like environment exfiltration patterns before broad Bash allow rules.
+
+Run `ur safety init` to write `.ur/safety-policy.json`. Commit it only when the
+rules are safe and useful for the whole team; keep machine-local secrets and
+local settings out of Git.
+
+## Project Context Pack
+
+`ur context-pack` writes durable architecture context and task memory:
+
+```sh
+ur context-pack scan
+ur context-pack remember --decision "Use package scripts before ad hoc commands"
+ur context-pack remember --constraint "Do not expose secret values"
+ur context-pack remember --command "bun run typecheck"
+ur context-pack remember --diff "Safety policy wired into Bash permission checks"
+ur context-pack compress
+```
+
+Generated files:
+
+- `.ur/project-manifest.json` — architecture manifest from Project DNA,
+  `package.json`, instruction files, `.ur/verify.json`, `.ur/safety-policy.json`,
+  and other manifests.
+- `.ur/context/architecture.md` — human-readable architecture summary.
+- `.ur/context/task-memory.jsonl` — decisions, constraints, commands, diffs,
+  and notes.
+- `.ur/context/compressed.md` — compressed task context summary.
+
 Two related slash commands:
 
 - `/verify [focus]` — manually run the deep verification subagent (e.g.

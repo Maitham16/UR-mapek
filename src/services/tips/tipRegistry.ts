@@ -453,7 +453,7 @@ const externalTips: Tip[] = [
   {
     id: 'web-app',
     content: async () =>
-      'Run tasks in the cloud while you keep coding locally · clau.de/web',
+      'Run tasks in the cloud while you keep coding locally · ur.ai/web',
     cooldownSessions: 15,
     isRelevant: async () => true,
   },

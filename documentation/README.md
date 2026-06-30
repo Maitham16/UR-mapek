@@ -17,6 +17,10 @@ required.
 When adding a public command, update the `commands` array in `app.js` and add
 examples to the relevant tutorial or workflow section in `index.html`.
 
+When a command writes project state, also update `projectFiles` in `app.js`.
+For safety or context features, include the relevant `.ur/` paths and validation
+commands so the static docs match the implementation.
+
 For public feature patches, also check the project-wide docs set:
 
 - root `README.md`

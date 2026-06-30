@@ -22,6 +22,12 @@ For project-specific feature work, `ur test-first detect` shows the detected
 compile/test/lint command set. `ur test-first install` can persist that command
 set into `.ur/verify.json` so future mutating turns run the same gates.
 
+For safety-sensitive changes, `ur safety check --command "<cmd>"` previews
+read/write/execute/network permission classes, destructive-command approval,
+sandbox posture, and secret exfiltration denial. `ur context-pack scan` records
+the repo architecture and manifest-derived command set; `ur context-pack
+compress` preserves task decisions, constraints, commands, and diffs.
+
 `bun run release:check` is also wired into `prepack`, so stale bundles and
 version drift fail before packaging.
 
@@ -56,6 +62,12 @@ Public feature releases should update the full documentation set:
 - `ur test-first` stores failing compile/test/lint traces under
   `.ur/test-first/traces/` and reports success only from zero-exit command
   evidence.
+- `ur safety` asks before destructive commands, recommends sandboxing for risky
+  operations, and blocks common secret exfiltration paths before broad shell
+  allow rules.
+- `ur context-pack` keeps durable architecture summaries and task memory under
+  `.ur/context/` so decisions, constraints, commands, and diffs survive context
+  compression.
 - Deep verification through the verification subagent is manual by default and
   can be enabled with `UR_VERIFIER_AUTO_SUBAGENT=1`.
 - Secrets must stay in environment variables, secure storage, or local ignored

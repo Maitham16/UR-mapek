@@ -7,6 +7,7 @@ import {
   type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
   logEvent,
 } from '../../services/analytics/index.js'
+import { evaluateShellSafetyPolicy } from '../../services/safety/projectSafety.js'
 import type { ToolPermissionContext, ToolUseContext } from '../../Tool.js'
 import type { PendingClassifierCheck } from '../../types/permissions.js'
 import { count } from '../../utils/array.js'
@@ -1737,6 +1738,33 @@ export async function bashToolHasPermission(
     // Always force legacy — shadow mode is observational only.
     astResult = { kind: 'parse-unavailable' }
     astRoot = null
+  }
+
+  const safetyEvaluation = evaluateShellSafetyPolicy(input.command, getCwd(), {
+    dangerouslyDisableSandbox: input.dangerouslyDisableSandbox,
+  })
+  if (safetyEvaluation.behavior === 'deny') {
+    const reason = safetyEvaluation.reasons.join('; ')
+    return {
+      behavior: 'deny',
+      message: `Blocked by project safety policy: ${reason}`,
+      decisionReason: {
+        type: 'other' as const,
+        reason: `Project safety policy denied command: ${reason}`,
+      },
+    }
+  }
+  if (safetyEvaluation.behavior === 'ask') {
+    const decisionReason: PermissionDecisionReason = {
+      type: 'other' as const,
+      reason: `Project safety policy requires approval: ${safetyEvaluation.reasons.join('; ')}`,
+    }
+    return {
+      behavior: 'ask',
+      decisionReason,
+      message: createPermissionRequestMessage(BashTool.name, decisionReason),
+      suggestions: [],
+    }
   }
 
   if (astResult.kind === 'too-complex') {

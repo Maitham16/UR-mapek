@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.19.0
+
+### Added
+- **Permission and safety policy (`ur safety`).** Added a project shell safety
+  evaluator that separates read, write, execute, and network command classes;
+  asks before destructive commands; recommends sandboxing for risky operations;
+  and denies common secret-file and secret-like environment exfiltration paths.
+- **Bash permission integration.** The project safety policy now runs before
+  broad Bash allow paths and sandbox auto-allow, so destructive commands still
+  require approval and secret exfiltration is blocked even when permissive
+  command rules exist.
+- **Project context pack (`ur context-pack`).** Added repo architecture
+  scanning from manifests, instruction files, Project DNA, verify gates, and
+  safety config. Task memory records decisions, constraints, commands, diffs,
+  and notes under `.ur/context/`, with compression into a durable summary.
+
+### Changed
+- **Chrome/Desktop links.** Replaced deprecated Chrome and desktop documentation
+  links in source with current `ur.ai` URLs.
+- **Version bump.** Updated from 1.18.0 to 1.19.0 across `package.json`,
+  `bunfig.toml`, the VS Code extension, and bundled CLI metadata.
+
+### Verified
+- Added focused tests for safety policy decisions, policy file creation,
+  context manifest generation, task memory compression, CLI command parsing,
+  and updated agent feature/trend inventories.
+
 ## 1.18.0
 
 ### Added
@@ -73,7 +100,7 @@
 ## 1.14.1
 
 ### Changed
-- Removed the `desktop-app` startup tip pointing to `clau.de/desktop`.
+- Removed the `desktop-app` startup tip pointing to the legacy desktop URL.
 
 ### Changed
 - **Version bump.** Updated from 1.14.0 to 1.14.1 across `package.json`, `bunfig.toml`, and bundled CLI.

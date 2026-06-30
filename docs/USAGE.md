@@ -92,6 +92,14 @@ Use `UR.local.md` for private local instructions. It is ignored by `.gitignore`.
 
 Project `.ur/` assets can hold settings, skills, agents, MCP config, and local runtime state. Commit only shared files. Keep local memory, generated indexes, logs, and local settings untracked.
 
+For a manifest-backed summary of the repository, run:
+
+```sh
+ur context-pack scan
+ur context-pack remember --decision "Use package scripts before ad hoc commands"
+ur context-pack compress
+```
+
 ## Commands
 
 UR includes slash commands and CLI subcommands for common workflows:
@@ -104,6 +112,8 @@ UR includes slash commands and CLI subcommands for common workflows:
 - `ur a2a card` to print UR's Agent Card metadata for A2A discovery
 - `ur bg ...` to run detached local background agents with optional worktrees and PRs
 - `ur repo-edit ...` to index the repo, plan AST-aware renames, preview patches, and apply with rollback
+- `ur safety ...` to inspect project shell safety policy and preview command risk
+- `ur context-pack ...` to summarize architecture and persist task decisions, constraints, commands, and diffs
 - `ur code-index watch` to keep the local semantic code index fresh
 - `ur memory retention ...` to prune project-local memory by TTL, max entries, and decay
 - `ur spec ...` to scaffold requirements, design, and tasks, then run a spec task list
@@ -132,6 +142,11 @@ ur escalate run "refactor the cache layer" --force-oracle --dry-run
 ur test-first detect
 ur test-first --dry-run
 ur test-first install
+ur safety status
+ur safety check --command "rm -rf build"
+ur context-pack scan
+ur context-pack remember --constraint "Run command evidence before claiming success"
+ur context-pack compress
 ur ci-loop --command "bun test" --dry-run
 ur artifacts capture-diff
 ur bg run "fix the flaky parser test" --worktree --dry-run
@@ -155,3 +170,9 @@ ur -p \
 ```
 
 Avoid `--dangerously-skip-permissions` unless the session is inside a disposable sandbox.
+
+Use `ur safety check --command "<cmd>"` before adding risky shell commands to
+scripts, docs, automations, or verifier gates. The safety policy separates
+read/write/execute/network permissions, asks before destructive operations,
+recommends sandboxing for risky commands, and denies common secret exfiltration
+patterns.

@@ -86,6 +86,8 @@ import devcontainer from './commands/devcontainer/index.js'
 import arena from './commands/arena/index.js'
 import ciLoop from './commands/ci-loop/index.js'
 import testFirst from './commands/test-first/index.js'
+import safety from './commands/safety/index.js'
+import contextPack from './commands/context-pack/index.js'
 import artifacts from './commands/artifacts/index.js'
 import trigger from './commands/trigger/index.js'
 import sdk from './commands/sdk/index.js'
@@ -417,6 +419,8 @@ const COMMANDS = memoize((): Command[] => [
   arena,
   ciLoop,
   testFirst,
+  safety,
+  contextPack,
   artifacts,
   trigger,
   sdk,

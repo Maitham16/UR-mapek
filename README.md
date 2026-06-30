@@ -14,8 +14,8 @@ UR Agent is a Bun and TypeScript command-line coding agent. It opens a stateful
 interactive terminal session by default, can run one-shot prompts for scripts,
 and includes workflow commands for specification-driven development,
 multi-agent execution, test-first quality loops, CI repair loops, background
-agents, MCP servers, plugins, skills, memory, verification, and local model
-routing.
+agents, MCP servers, plugins, skills, memory, permission safety policy,
+project context packing, verification, and local model routing.
 
 UR sends model requests through the configured local Ollama app. That app can
 serve local models or Ollama Cloud-backed models, while UR itself stays out of
@@ -36,6 +36,9 @@ handing work off to other tools or agents when needed.
   structured work beyond a single chat turn.
 - **Reliable repo editing.** Use `ur repo-edit` for indexed search,
   AST-aware rename plans, patch previews, and rollback-safe multi-file apply.
+- **Permission and context control.** Use `ur safety` and `ur context-pack` to
+  inspect command risk, initialize project safety policy, summarize repository
+  architecture, and preserve task decisions, constraints, commands, and diffs.
 - **Verification and provenance.** Use `ur test-first`, the built-in verifier,
   `/verify`, `.ur/verify.json`, `ur artifacts`, `ur claim-ledger`, and `/trace`
   to make results easier to inspect.
@@ -126,6 +129,8 @@ as first-class subcommands in the shipped CLI.
 | `ur arena` | Run multiple agents on the same task in isolated worktrees and surface the winning diff. |
 | `ur ci-loop` | Run a build or test command, hand failures to a fix agent, and retry with a bounded budget. |
 | `ur test-first` | Detect the project stack, run compile/test/lint commands, store failure traces, and install edit-time verify gates. |
+| `ur safety` | Inspect or initialize project shell safety policy and evaluate command risk before execution. |
+| `ur context-pack` | Write project architecture context, task memory, and compressed context under `.ur/`. |
 | `ur bg` | Run and manage detached local background agents with optional worktrees and PR creation. |
 | `ur automation` | Store and run project-local scheduled automation specs under `.ur/automations/`. |
 | `ur workflow` | Define, validate, graph, run, and resume declarative agent workflows. |
@@ -159,6 +164,10 @@ ur escalate run "refactor the cache layer" --force-oracle --dry-run
 ur test-first detect
 ur test-first --dry-run
 ur test-first install
+ur safety check --command "rm -rf build"
+ur context-pack scan
+ur context-pack remember --decision "Use package scripts before ad hoc commands"
+ur context-pack compress
 ur ci-loop --command "bun test" --max-attempts 3 --dry-run
 ur bg run "fix the flaky parser test" --worktree --dry-run
 ur automation create nightly --schedule "0 9 * * 1-5" --prompt "Review open tasks"
@@ -177,6 +186,11 @@ UR reads repository instructions and local runtime state from project files:
 - `UR.local.md` is for private local instructions.
 - `.ur/skills/` stores project skills.
 - `.ur/agents/` stores custom agents and role modes.
+- `.ur/specs/`, `.ur/artifacts/`, `.ur/automations/`, `.ur/test-first/`,
+- `.ur/safety-policy.json` configures project shell safety rules for read,
+  write, execute, and network command classes.
+- `.ur/project-manifest.json` and `.ur/context/` hold architecture summaries,
+  task memory, compressed context, and command/constraint decisions.
 - `.ur/specs/`, `.ur/artifacts/`, `.ur/automations/`, `.ur/test-first/`,
   `.ur/memory/`, and `.ur/index/` hold workflow state, review artifacts,
   scheduled jobs, failure traces, memory, and indexes.
@@ -198,8 +212,8 @@ settings, generated indexes, memory, logs, and secrets out of Git.
 - `src/tools/` contains tool implementations for file editing, shell execution,
   MCP resources, task management, and agent delegation.
 - `src/services/` contains runtime services for MCP, verification, memory,
-  code indexing, model routing, background agents, A2A, analytics, sync, and
-  API integration.
+  code indexing, safety policy, context manifests, model routing, background
+  agents, A2A, analytics, sync, and API integration.
 - `extensions/vscode-ur-inline-diffs/` contains the VS Code inline diff review
   extension.
 - `marketplace-plugins/` contains bundled example marketplace plugins.
@@ -219,6 +233,13 @@ the permission boundary matters.
 - Project gates can be configured in `.ur/verify.json`.
 - `ur test-first install` writes detected compile/test/lint commands into
   `.ur/verify.json` so mutating turns have command evidence before completion.
+- `ur safety check --command "<cmd>"` classifies read, write, execute, and
+  network permissions, asks before destructive commands, recommends sandboxing
+  for risky operations, and blocks common secret exfiltration paths.
+- `ur safety init` writes `.ur/safety-policy.json` for project-specific safety
+  rules.
+- `ur context-pack scan` writes a repo architecture manifest from package
+  scripts, instruction files, `.ur/verify.json`, and safety config.
 - The deep verification subagent is available through `/verify` and can be
   auto-enabled with `UR_VERIFIER_AUTO_SUBAGENT=1`.
 - OS-level sandbox support is available on macOS and Linux through UR's
@@ -264,6 +285,7 @@ CLI. Rebuild it after source, version, or macro changes.
 - [Configuration](docs/CONFIGURATION.md)
 - [Agent Feature Expansion](docs/AGENT_FEATURES.md)
 - [Agent Trend Coverage](docs/AGENT_TRENDS.md)
+- [1.19.0 Upgrade Notes](docs/AGENT_UPGRADE_1.19.0.md)
 - [1.18.0 Upgrade Notes](docs/AGENT_UPGRADE_1.18.0.md)
 - [1.17.0 Upgrade Notes](docs/AGENT_UPGRADE_1.17.0.md)
 - [Development Guide](docs/DEVELOPMENT.md)

@@ -7,7 +7,8 @@
 - `src/main.tsx` defines top-level CLI flags and subcommands.
 - `src/commands.ts` registers slash commands and command modules.
 - `src/tools/` contains tool implementations.
-- `src/services/` contains API, MCP, analytics, sync, and runtime services.
+- `src/services/` contains API, MCP, analytics, sync, safety, context, and
+  runtime services.
 - `src/components/` and `src/ink/` implement the terminal UI.
 - `examples/` contains example prompts and workflows.
 - `test/` contains Bun tests for local UR utility modules.
@@ -43,6 +44,11 @@ Use `ur test-first detect` when adding a feature to inspect the repository's
 detected compile/test/lint command set before choosing the final verification
 commands for the change.
 
+Use `ur safety check --command "<cmd>"` before documenting or automating risky
+shell commands. Use `ur context-pack scan` when a change adds new manifests,
+command surfaces, or architecture rules that should be captured as project
+context.
+
 The GitHub install path uses the bundled launcher in `dist/cli.js`, so `bun run bundle` must be run before packaging or pushing a release. `bun run release:check` verifies that `package.json`, `bunfig.toml`, the bundle, docs, and `node ./bin/ur.js --version` agree.
 
 ## Build
@@ -68,6 +74,9 @@ only the root README. Check:
 For top-level commands, also update the static documentation site command data
 in `documentation/app.js` and any relevant tutorial section in
 `documentation/index.html`.
+
+For command surfaces that write `.ur/` state, update configuration and
+validation docs with the generated files and cleanup expectations.
 
 ## Local Command Link
 

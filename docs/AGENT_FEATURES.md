@@ -1,6 +1,6 @@
 # Agent Feature Expansion
 
-This page tracks the nine agent-platform additions that were prioritized after
+This page tracks the agent-platform additions that were prioritized after
 comparing UR with current Codex, Claude Code, Copilot, and Jules-style agent
 workflows.
 
@@ -25,6 +25,12 @@ ur bg run "fix the flaky parser test" --worktree --dry-run
 ur test-first detect
 ur test-first --dry-run
 ur test-first install
+ur safety status
+ur safety init
+ur safety check --command "rm -rf build"
+ur context-pack scan
+ur context-pack remember --decision "Use package scripts before ad hoc commands"
+ur context-pack compress
 ur repo-edit index
 ur repo-edit preview rename oldName --to newName
 ur repo-edit apply rename oldName --to newName --check "bun test"
@@ -41,6 +47,13 @@ ur browser-qa run home-page-smoke --dry-run
 ur --discover-ollama
 ur --ollama-host http://192.168.1.50:11434
 ```
+
+## v1.19.0 Additions
+
+| Addition | Surface | What it adds |
+| --- | --- | --- |
+| Permission and safety policy | `ur safety status\|init\|check` | Separates read/write/execute/network command permissions, asks before destructive commands, recommends sandboxing for risky operations, and denies common secret-file and secret-like environment exfiltration paths before broad Bash allow rules. |
+| Project context pack | `ur context-pack scan\|remember\|compress` | Builds `.ur/project-manifest.json` and `.ur/context/architecture.md` from manifests, instruction files, Project DNA, verify gates, and safety config; stores task decisions, constraints, commands, diffs, and notes; compresses old context into `.ur/context/compressed.md`. |
 
 ## v1.18.0 Additions
 
@@ -88,6 +101,8 @@ and route model work through the local Ollama-backed UR runtime.
 | Semantic memory index | `ur semantic-memory build|search` | Local memory index over durable memory, docs, README, and UR instructions |
 | Claim provenance ledger | `ur claim-ledger add|list|validate` | Maps generated claims to web, file, MCP, tool, or user sources |
 | Browser replay evals | `ur browser-qa list|validate|run` | Validates replay fixtures and performs lightweight target smoke checks |
+| Permission and safety policy | `ur safety status|init|check` | Project-aware shell safety checks for destructive operations, sandbox recommendations, permission classes, and secret exfiltration denial |
+| Project context pack | `ur context-pack scan|remember|compress` | Architecture manifest, durable task memory, and compressed context summaries based on manifests and instructions |
 
 ## Design Notes
 

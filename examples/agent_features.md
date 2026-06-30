@@ -48,6 +48,17 @@ ur test-first --dry-run
 ur test-first install
 ```
 
+Preview command safety and preserve project context:
+
+```sh
+ur safety status
+ur safety check --command "rm -rf build"
+ur context-pack scan
+ur context-pack remember --decision "Use package scripts before ad hoc commands"
+ur context-pack remember --constraint "Never expose secret values"
+ur context-pack compress
+```
+
 Use the local memory, evidence, and browser QA helpers:
 
 ```sh
