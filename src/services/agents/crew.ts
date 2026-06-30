@@ -19,6 +19,7 @@ import { safeParseJSON } from '../../utils/json.js'
 import { makeCliStepRunner, makeDryRunner } from './cliStepRunner.js'
 import type { StepRunner, Verdict } from './executor.js'
 import type { WorkflowStep } from './workflows.js'
+import type { DecomposedTask } from './decomposer.js'
 
 export type CrewTaskStatus = 'todo' | 'claimed' | 'done' | 'failed'
 
@@ -33,6 +34,10 @@ export type CrewTask = {
   verdict?: Verdict | null
   claimedAt?: string
   finishedAt?: string
+  filesTouched?: string[]
+  risk?: 'low' | 'medium' | 'high'
+  testsRequired?: string[]
+  rollbackPoint?: string
 }
 
 export type CrewSpec = {
@@ -144,14 +149,38 @@ function makeTask(index: number, instruction: string, goal: string): CrewTask {
   }
 }
 
+function makeTaskFromDecomposed(task: DecomposedTask, goal: string): CrewTask {
+  const title = task.goal.length > 72 ? `${task.goal.slice(0, 69)}...` : task.goal
+  const files = task.filesTouched.length ? `\nFiles touched: ${task.filesTouched.join(', ')}` : ''
+  const risk = `\nRisk level: ${task.risk}`
+  const tests = `\nTests required: ${task.testsRequired.join(', ')}`
+  const rollback = `\nRollback point: ${task.rollbackPoint}`
+  return {
+    id: task.id,
+    title,
+    prompt: `Overall goal: ${goal}\n\nYour subtask: ${task.goal}${files}${risk}${tests}${rollback}\n\nComplete only this subtask. End your reply with VERDICT: PASS if you finished it, or VERDICT: FAIL if you could not.`,
+    status: 'todo',
+    filesTouched: task.filesTouched,
+    risk: task.risk,
+    testsRequired: task.testsRequired,
+    rollbackPoint: task.rollbackPoint,
+  }
+}
+
 export function createCrew(
   cwd: string,
   name: string,
   goal: string,
-  options: { lead?: string; tasks?: string[] } = {},
+  options: { lead?: string; tasks?: string[]; decomposed?: DecomposedTask[] } = {},
 ): CrewSpec {
   const now = new Date().toISOString()
-  const instructions = options.tasks && options.tasks.length > 0 ? options.tasks : decomposeGoal(goal)
+  let tasks: CrewTask[]
+  if (options.decomposed && options.decomposed.length > 0) {
+    tasks = options.decomposed.map(task => makeTaskFromDecomposed(task, goal))
+  } else {
+    const instructions = options.tasks && options.tasks.length > 0 ? options.tasks : decomposeGoal(goal)
+    tasks = instructions.map((instruction, index) => makeTask(index, instruction, goal))
+  }
   const spec: CrewSpec = {
     version: 1,
     name: sanitizeCrewName(name),
@@ -159,7 +188,7 @@ export function createCrew(
     lead: options.lead ?? 'general-purpose',
     createdAt: now,
     updatedAt: now,
-    tasks: instructions.map((instruction, index) => makeTask(index, instruction, goal)),
+    tasks,
   }
   saveCrew(cwd, spec)
   return spec

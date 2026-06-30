@@ -66,6 +66,7 @@ export const call: LocalCommandCall = async (args: string) => {
       workflow.name = `${pattern.id}-run`
       const dryRun = tokens.includes('--dry-run')
       const maxTurnsValue = Number(optionValue(tokens, '--max-turns') ?? '30')
+      const parallelAgents = pattern.stages.filter(s => s.parallelizable).length
       const result = await saveAndRunWorkflow(workflow, {
         cwd: getCwd(),
         stateName: workflow.name,
@@ -76,6 +77,7 @@ export const call: LocalCommandCall = async (args: string) => {
           tokens.includes('--dangerously-skip-permissions'),
         maxTurns:
           Number.isFinite(maxTurnsValue) && maxTurnsValue > 0 ? maxTurnsValue : 30,
+        maxConcurrency: parallelAgents > 1 ? parallelAgents : undefined,
         loop: pattern.loop
           ? {
               from: pattern.loop.from,

@@ -116,7 +116,7 @@ UR includes slash commands and CLI subcommands for common workflows:
 - `ur context-pack ...` to summarize architecture and persist task decisions, constraints, commands, and diffs
 - `ur code-index watch` to keep the local semantic code index fresh
 - `ur memory retention ...` to prune project-local memory by TTL, max entries, and decay
-- `ur spec ...` to scaffold requirements, design, and tasks, then run a spec task list
+- `ur spec ...` to scaffold requirements, design, and tasks, run a spec task list, and verify with strict proof gates
 - `ur escalate ...` to plan, run, or ask an oracle model for hard tasks
 - `ur arena ...` to run multiple agents on the same task and select a winner
 - `ur test-first ...` to detect compile/test/lint commands, store failure traces, and install after-edit gates
@@ -129,6 +129,8 @@ UR includes slash commands and CLI subcommands for common workflows:
 - `ur eval report ...` to show a saved report or write a single-suite dashboard
 - `ur eval dashboard` to generate the local HTML dashboard across all reports
 - `ur eval bench ...` to import local SWE-bench, Terminal-Bench, or Aider Polyglot exports
+- `ur crew ...` to run lead+worker agent crews with optional automatic task decomposition
+- `ur pattern ...` to run multi-agent collaboration patterns (PEER, DOE, concurrent, handoff, debate, parallel)
 - `ur doctor` to inspect CLI health
 - `ur update` or `ur upgrade` to check for updates
 
@@ -142,6 +144,8 @@ Agent platform examples:
 ```sh
 ur spec init demo --goal "1. add a utils.add function 2. add a test"
 ur spec run demo --all --dry-run
+ur spec run demo --all --kernel
+ur spec verify demo --kernel
 ur arena "implement a debounce helper" --agents 2 --dry-run
 ur escalate run "refactor the cache layer" --force-oracle --dry-run
 ur test-first detect
@@ -169,6 +173,9 @@ ur eval run starter --dry-run --json
 ur eval run starter --metrics --json
 ur eval report starter --dashboard
 ur eval dashboard
+ur crew create parser-crew --goal "fix the flaky parser test" --decompose --dry-run
+ur crew run parser-crew --workers 3 --decompose --dry-run
+ur pattern parallel "refactor login without changing behavior" --execute --dry-run
 ```
 
 ## Permissions

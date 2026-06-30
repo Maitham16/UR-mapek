@@ -54,6 +54,9 @@ ur worktree clean --dry-run
 ur eval run starter --metrics --json
 ur eval report starter --dashboard
 ur eval dashboard
+ur spec init auth-refactor --goal "refactor login without changing behavior"
+ur spec run auth-refactor --all
+ur spec verify auth-refactor
 ```
 
 ## v1.22.0 Additions
@@ -63,6 +66,10 @@ ur eval dashboard
 | Eval execution metrics | `ur eval run <suite> --metrics`, `UR_EVAL_METRICS_FILE` | Child-serialized cost, tokens, model, duration, files changed, insertions/deletions, command failures, human-edit heuristics, and per-case `testCommand` pass/fail. Safe for parallel runs because each child writes its own metrics file. |
 | Richer eval dashboard | `ur eval dashboard`, `ur eval report <suite> --dashboard` | Local-first HTML dashboard with summary cards and a per-case timeline showing model, time, cost, tokens, diffs, test result, command failures, and human edits. |
 | Per-case run metrics persistence | `.ur/evals/.runs/<suite>/<case>.json` | `ur eval run <suite> --metrics` writes each case's metrics to a JSON file for downstream analysis. |
+| Spec verification / verifier kernel role | `ur spec verify <name>`, `src/services/agents/specVerifier.ts` | Deterministic project gates first, then a read-only deep verification subagent that must prove compile/test/lint/diff/runtime before PASS. Writes `.ur/specs/<name>/verification.md` and a `verification` record in `spec.json`. First concrete kernel role: verifier is stricter than the generator. |
+| AgentKernel abstraction | `ur spec run|verify <name> --kernel`, `src/services/agents/kernel.ts` | Pure orchestrator separating planner, executor, verifier, critic, memory, router, and guard. Routes spec run/verify through kernel stages while keeping the legacy loop as default. Foundation for applying the same orchestration to workflows, crew, and CI loop. |
+| Rich task decomposition | `ur crew create|run|plan ... --decompose`, `src/services/agents/decomposer.ts` | Splits large goals into atomic subtasks with goal, files touched, risk level (low/medium/high), tests required, and rollback point. Deterministic fallback + optional LLM-driven JSON decomposition. |
+| Parallel specialized subagents | `ur pattern parallel "<task>" --execute`, `src/services/agents/patterns.ts` | Bug finder, patch writer, test writer, security auditor, and style reviewer run in parallel via the workflow executor, then a synthesizer merges results into one plan. |
 
 ## v1.21.0 Additions
 

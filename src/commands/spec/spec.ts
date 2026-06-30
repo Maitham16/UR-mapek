@@ -13,6 +13,8 @@ import {
   runSpec,
   type SpecPhase,
 } from '../../services/agents/spec.js'
+import { createAgentKernel } from '../../services/agents/kernel.js'
+import { runSpecVerification } from '../../services/agents/specVerifier.js'
 import { parseArguments } from '../../utils/argumentSubstitution.js'
 import { getCwd } from '../../utils/cwd.js'
 
@@ -29,7 +31,8 @@ function usage(): string {
     '  ur spec approve <name> [requirements|design|tasks] [--json]',
     '  ur spec generate <name> [requirements|design|tasks] [--dry-run] [--max-turns N] [--json]',
     '  ur spec next <name> [--json]',
-    '  ur spec run <name> [--all] [--dry-run] [--max-turns N] [--skip-permissions] [--json]',
+    '  ur spec run <name> [--all] [--dry-run] [--max-turns N] [--skip-permissions] [--kernel] [--json]',
+    '  ur spec verify <name> [--dry-run] [--max-turns N] [--skip-permissions] [--kernel] [--json]',
     '  ur spec delete <name> [--json]',
   ].join('\n')
 }
@@ -149,6 +152,7 @@ export const call: LocalCommandCall = async (args: string) => {
   if (action === 'run') {
     const maxTurnsRaw = option(tokens, '--max-turns')
     const events: string[] = []
+    const useKernel = tokens.includes('--kernel')
     try {
       const result = await runSpec(cwd, name, {
         cwd,
@@ -156,6 +160,9 @@ export const call: LocalCommandCall = async (args: string) => {
         dryRun: tokens.includes('--dry-run'),
         skipPermissions: tokens.includes('--skip-permissions'),
         maxTurns: maxTurnsRaw ? Number(maxTurnsRaw) : undefined,
+        kernel: useKernel
+          ? createAgentKernel({ cwd, dryRun: tokens.includes('--dry-run'), maxTurns: maxTurnsRaw ? Number(maxTurnsRaw) : undefined, skipPermissions: tokens.includes('--skip-permissions') })
+          : undefined,
         onEvent: event => {
           events.push(`  ${event.id}: ${event.isError ? 'error' : (event.verdict ?? 'no verdict')}`)
         },
@@ -168,6 +175,42 @@ export const call: LocalCommandCall = async (args: string) => {
       return {
         type: 'text',
         value: `Spec ${result.name}: ${result.remaining} task(s) remaining.${result.stoppedOnFailure ? ' Stopped on failure.' : ''}\n\nRan:\n${ran}${trace}`,
+      }
+    } catch (error) {
+      return { type: 'text', value: error instanceof Error ? error.message : String(error) }
+    }
+  }
+
+  if (action === 'verify') {
+    const meta = loadSpec(cwd, name)
+    if (!meta) return { type: 'text', value: notFound(name) }
+    const maxTurnsRaw = option(tokens, '--max-turns')
+    const useKernel = tokens.includes('--kernel')
+    try {
+      const result = await runSpecVerification(cwd, name, {
+        dryRun: tokens.includes('--dry-run'),
+        skipPermissions: tokens.includes('--skip-permissions'),
+        maxTurns: maxTurnsRaw ? Number(maxTurnsRaw) : undefined,
+        kernel: useKernel
+          ? createAgentKernel({ cwd, dryRun: tokens.includes('--dry-run'), maxTurns: maxTurnsRaw ? Number(maxTurnsRaw) : undefined, skipPermissions: tokens.includes('--skip-permissions') })
+          : undefined,
+      })
+      if (json) return { type: 'text', value: JSON.stringify(result, null, 2) }
+      const gateLines = result.gateResults.length
+        ? result.gateResults.map(g => `  ${g.ok ? '✓' : '✗'} ${g.command}`).join('\n')
+        : '  (no project gates configured)'
+      return {
+        type: 'text',
+        value: [
+          `Spec ${name}: verification ${result.verdict}`,
+          `Summary: ${result.summary}`,
+          `Command failures: ${result.commandFailures}`,
+          '',
+          'Gates:',
+          gateLines,
+          '',
+          'Report: .ur/specs/verification.md',
+        ].join('\n'),
       }
     } catch (error) {
       return { type: 'text', value: error instanceof Error ? error.message : String(error) }

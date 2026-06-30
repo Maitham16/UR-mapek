@@ -258,6 +258,83 @@ export const AGENT_PATTERNS: AgentPattern[] = [
     ],
   },
   {
+    id: 'parallel',
+    name: 'Parallel specialized subagents',
+    acronym: 'PAR',
+    summary:
+      'Run multiple specialist agents in parallel — bug finder, patch writer, test writer, security auditor, style reviewer — then synthesize their outputs into one coherent plan. Best for complex code changes that need independent expert scrutiny before integration.',
+    bestFor: [
+      'complex code changes needing independent expert review',
+      'tasks where bug-finding, patching, testing, security, and style can be separated',
+      'high-confidence patches that must survive multiple adversarial checks',
+    ],
+    reference: 'https://openai.github.io/openai-agents-python/',
+    loop: null,
+    stages: [
+      {
+        id: 'find-bugs',
+        role: 'Bug finder',
+        agent: 'reviewer',
+        goal: 'Find concrete bugs in the code relevant to the task.',
+        prompt:
+          'Find bugs in the code related to: {{task}}. List concrete issues with file paths and line numbers. Do not write fixes; only identify problems. End with VERDICT: PASS if no serious bugs were found, or VERDICT: FAIL with the bug list.',
+        dependsOn: [],
+        parallelizable: true,
+      },
+      {
+        id: 'write-patch',
+        role: 'Patch writer',
+        agent: 'worker',
+        goal: 'Write the minimal correct patch for the task.',
+        prompt:
+          'Write the minimal patch for: {{task}}. Return only the code changes and a VERDICT line. Do not write tests or prose; focus on the implementation.',
+        dependsOn: [],
+        parallelizable: true,
+      },
+      {
+        id: 'write-tests',
+        role: 'Test writer',
+        agent: 'test-runner',
+        goal: 'Write tests that exercise the expected behavior.',
+        prompt:
+          'Write tests for: {{task}}. Run them and report results. End with VERDICT: PASS if tests pass, or VERDICT: FAIL with failure output.',
+        dependsOn: [],
+        parallelizable: true,
+      },
+      {
+        id: 'security-review',
+        role: 'Security auditor',
+        agent: 'security-auditor',
+        goal: 'Review the task for security vulnerabilities and unsafe patterns.',
+        prompt:
+          'Security review for: {{task}}. Report any vulnerabilities, unsafe patterns, or trust-boundary issues. End with VERDICT: PASS if no serious issues, or VERDICT: FAIL with specifics.',
+        dependsOn: [],
+        parallelizable: true,
+      },
+      {
+        id: 'style-review',
+        role: 'Style reviewer',
+        agent: 'reviewer',
+        goal: 'Review maintainability, style, and clarity.',
+        prompt:
+          'Style/review for: {{task}}. Report maintainability, clarity, naming, and consistency issues. End with VERDICT: PASS if acceptable, or VERDICT: FAIL with a concise punch list.',
+        dependsOn: [],
+        parallelizable: true,
+      },
+      {
+        id: 'synthesize',
+        role: 'Synthesizer',
+        agent: 'general-purpose',
+        goal: 'Merge parallel findings into one coherent, actionable plan.',
+        prompt:
+          'Synthesize the parallel reviews and patch above into a single coherent plan for: {{task}}. Resolve conflicts between findings. Produce a unified patch/test/security/style recommendation. End with VERDICT: PASS if ready to apply, or VERDICT: FAIL if more work is needed.',
+        dependsOn: ['find-bugs', 'write-patch', 'write-tests', 'security-review', 'style-review'],
+        gate: 'verification',
+        checkpoint: true,
+      },
+    ],
+  },
+  {
     id: 'debate',
     name: 'Debate (propose, critique, moderate)',
     acronym: 'DEB',

@@ -27,6 +27,8 @@ import {
   makeDryHeadlessRunner,
   type HeadlessRunner,
 } from './headlessAgent.js'
+import type { AgentKernel } from './kernel.js'
+import type { SpecVerifyRecord } from './specVerifier.js'
 
 export type SpecPhase = 'requirements' | 'design' | 'tasks'
 
@@ -38,6 +40,7 @@ export type SpecMeta = {
   approvals: Record<SpecPhase, boolean>
   createdAt: string
   updatedAt: string
+  verification?: SpecVerifyRecord
 }
 
 export type SpecTask = { id: string; title: string; done: boolean }
@@ -223,6 +226,7 @@ export type SpecRunOptions = {
   maxTurns?: number
   skipPermissions?: boolean
   runner?: HeadlessRunner
+  kernel?: AgentKernel
   onEvent?: (event: { id: string; title: string; verdict: string | null; isError: boolean }) => void
 }
 
@@ -240,6 +244,22 @@ export async function runSpec(
 ): Promise<SpecRunResult> {
   const meta = loadSpec(cwd, name)
   if (!meta) throw new Error(`Spec not found: ${name}`)
+
+  // Kernel path: orchestrate through AgentKernel.
+  if (options.kernel) {
+    const { runSpecWithKernel } = await import('./kernelSpec.js')
+    const kernelResult = await runSpecWithKernel(cwd, name, options.kernel, {
+      dryRun: options.dryRun,
+      maxTurns: options.maxTurns,
+      skipPermissions: options.skipPermissions,
+      all: options.all,
+      runner: options.runner,
+    })
+    const tasksMd = readPhase(cwd, name, 'tasks') ?? ''
+    const remaining = parseTasks(tasksMd).filter(t => !t.done).length
+    return { ...kernelResult, remaining }
+  }
+
   const runner =
     options.runner ?? (options.dryRun ? makeDryHeadlessRunner() : defaultHeadlessRunner())
 
@@ -332,12 +352,15 @@ export function formatSpecStatus(cwd: string, meta: SpecMeta, json: boolean): st
     return JSON.stringify({ ...meta, tasks: { total: tasks.length, done } }, null, 2)
   }
   const mark = (ok: boolean) => (ok ? '✓' : '○')
+  const v = meta.verification
+  const vMark = v ? (v.verdict === 'PASS' ? '✓' : v.verdict === 'FAIL' ? '✗' : '◐') : '○'
   const lines = [
     `Spec: ${meta.name}`,
     `Goal: ${meta.goal}`,
     `Phase: ${meta.phase}`,
     `Approvals: ${mark(meta.approvals.requirements)} requirements  ${mark(meta.approvals.design)} design  ${mark(meta.approvals.tasks)} tasks`,
     `Tasks: ${done}/${tasks.length} done`,
+    `Verification: ${vMark} ${v ? `${v.verdict} (${v.generatedAt})` : 'not run'}`,
     '',
   ]
   for (const task of tasks) {

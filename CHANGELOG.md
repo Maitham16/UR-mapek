@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.22.1
+
+### Added
+- **Rich task decomposition.** `src/services/agents/decomposer.ts` splits large
+  goals into atomic subtasks with `goal`, `filesTouched`, `risk` (low/medium/high),
+  `testsRequired`, and `rollbackPoint`. `ur crew create|run|plan ... --decompose`
+  uses it; a deterministic fallback keeps the command offline and fast, while a
+  headless subagent path produces structured JSON.
+- **Parallel specialized subagents.** New `parallel` multi-agent pattern in
+  `src/services/agents/patterns.ts`: bug finder, patch writer, test writer,
+  security auditor, and style reviewer run concurrently, then a synthesizer
+  merges their outputs. Run it with
+  `ur pattern parallel "<task>" --execute [--dry-run]`.
+- **AgentKernel abstraction.** `src/services/agents/kernel.ts` is a pure
+  orchestrator with seven roles: planner, executor, verifier, critic, memory,
+  router, and guard. `ur spec run|verify <name> --kernel` routes through kernel
+  stages while the legacy path stays the default.
+- **Spec verification / verifier kernel role.** `ur spec verify <name>` runs
+  deterministic `.ur/verify.json` project gates, then a read-only deep
+  verification subagent that must prove compile/test/lint/diff/runtime before
+  `VERDICT: PASS`. Persists `.ur/specs/<name>/verification.md` and records the
+  result in `spec.json`.
+
+### Changed
+- **Version bump.** Updated from 1.22.0 to 1.22.1 across `package.json`,
+  `bunfig.toml`, the VS Code extension manifest, and the bundled CLI.
+
+### Verified
+- Added `test/decomposition.test.ts`, `test/parallelPattern.test.ts`, and
+  `test/kernel.test.ts` covering decomposition metadata, parallel pattern
+  workflow execution, and all seven kernel roles.
+
 ## 1.22.0
 
 ### Added
@@ -19,6 +51,28 @@
 - **Benchmark-style reporting.** `formatEvalReport` prints aggregate cost,
   tokens, files changed, command failures, human edits, duration, and test pass
   rate alongside the pass-rate summary.
+- **Spec verification / verifier kernel role.** `ur spec verify <name>` runs
+  deterministic project gates from `.ur/verify.json`, then invokes a read-only
+  deep verification subagent that must demonstrate compile/test/lint/diff/runtime
+  proof before emitting `VERDICT: PASS`. Results are persisted to
+  `.ur/specs/<name>/verification.md` and recorded in `spec.json` so `ur spec status`
+  shows the latest verdict.
+- **AgentKernel abstraction.** Added `src/services/agents/kernel.ts`, a pure
+  orchestrator with seven roles: planner, executor, verifier, critic, memory,
+  router, and guard. `ur spec run <name> --kernel` and
+  `ur spec verify <name> --kernel` route through kernel stages while the legacy
+  loop remains the default. `src/services/agents/kernelSpec.ts` provides
+  spec-to-stage adapters.
+- **Rich task decomposition.** Added `src/services/agents/decomposer.ts`. `ur crew
+  create|run|plan ... --decompose` splits a goal into atomic subtasks with
+  `goal`, `filesTouched`, `risk` (low/medium/high), `testsRequired`, and
+  `rollbackPoint` metadata. A deterministic fallback keeps it offline and fast;
+  the model path asks a headless subagent for structured JSON.
+- **Parallel specialized subagents.** Added `parallel` multi-agent pattern in
+  `src/services/agents/patterns.ts`. Bug finder, patch writer, test writer,
+  security auditor, and style reviewer run in parallel, then a synthesizer merges
+  the results. `ur pattern parallel "<task>" --execute` runs it via the workflow
+  executor with concurrency matching the number of parallel agents.
 
 ### Changed
 - **`makeCliEvalRunner` resets cost state per case**, reads child metrics,
@@ -32,6 +86,14 @@
 - Added `test/evalMetrics.test.ts` and `test/evalDashboard.test.ts` covering
   child metrics serialization, report aggregation, dashboard HTML rendering,
   HTML escaping, and run-metrics persistence.
+- Added `test/specVerify.test.ts` covering dry-run verification, gate fast-fail,
+  verification record persistence, and verifier prompt construction.
+- Added `test/kernel.test.ts` covering all seven kernel roles and the spec
+  run/verify kernel adapters.
+- Added `test/decomposition.test.ts` covering deterministic decomposition, risk
+  heuristics, LLM-driven dry-run decomposition, and crew metadata persistence.
+- Added `test/parallelPattern.test.ts` covering the `parallel` pattern stages,
+  workflow compilation, and dry-run execution through the workflow executor.
 
 ## 1.21.0
 

@@ -11,6 +11,7 @@ import {
   reopenClaimed,
   runCrew,
 } from '../../services/agents/crew.js'
+import { decomposeTask, formatDecomposition } from '../../services/agents/decomposer.js'
 import { parseArguments } from '../../utils/argumentSubstitution.js'
 import { getCwd } from '../../utils/cwd.js'
 
@@ -39,10 +40,11 @@ function usage(): string {
   return [
     'Usage:',
     '  ur crew list [--json]',
-    '  ur crew create <name> --goal "..." [--lead <agent>] [--json]',
+    '  ur crew create <name> --goal "..." [--lead <agent>] [--decompose] [--json]',
+    '  ur crew plan <name> --goal "..." [--decompose] [--json]',
     '  ur crew show <name> [--json]',
     '  ur crew add <name> --task "another subtask"',
-    '  ur crew run <name> [--workers N] [--worktrees] [--dry-run] [--resume] [--max-turns N] [--skip-permissions] [--json]',
+    '  ur crew run <name> [--workers N] [--worktrees] [--dry-run] [--resume] [--decompose] [--max-turns N] [--skip-permissions] [--json]',
     '  ur crew reset <name>',
     '  ur crew delete <name>',
     '',
@@ -66,11 +68,26 @@ export const call: LocalCommandCall = async (args: string) => {
   if (action === 'create') {
     const goal = option(tokens, '--goal')
     if (!name || !goal) return { type: 'text', value: usage() }
-    const spec = createCrew(cwd, name, goal, { lead: option(tokens, '--lead') })
+    const decompose = tokens.includes('--decompose')
+    const decomposed = decompose ? await decomposeTask(goal, { cwd, dryRun: tokens.includes('--dry-run') }) : undefined
+    const spec = createCrew(cwd, name, goal, { lead: option(tokens, '--lead'), decomposed })
     return {
       type: 'text',
       value: json ? formatCrew(spec, true) : `Created crew ${spec.name} with ${spec.tasks.length} task(s).\n\n${formatCrew(spec, false)}`,
     }
+  }
+
+  if (action === 'plan') {
+    const goal = option(tokens, '--goal')
+    if (!goal) return { type: 'text', value: usage() }
+    const tasks = await decomposeTask(goal, { cwd, dryRun: tokens.includes('--dry-run') })
+    const result = {
+      goal,
+      tasks,
+      rollbackPoint: tasks[0]?.rollbackPoint ?? 'HEAD',
+      generatedAt: new Date().toISOString(),
+    }
+    return { type: 'text', value: formatDecomposition(result, json) }
   }
 
   if (!name) return { type: 'text', value: usage() }
@@ -100,7 +117,16 @@ export const call: LocalCommandCall = async (args: string) => {
   }
 
   if (action === 'run') {
-    if (!loadCrew(cwd, name)) return { type: 'text', value: `Crew not found: ${name}` }
+    const spec = loadCrew(cwd, name)
+    if (!spec) {
+      const goal = option(tokens, '--goal')
+      if (!goal) return { type: 'text', value: `Crew not found: ${name}` }
+      const decomposed = await decomposeTask(goal, { cwd, dryRun: tokens.includes('--dry-run') })
+      createCrew(cwd, name, goal, { lead: option(tokens, '--lead'), decomposed })
+    } else if (tokens.includes('--decompose') && spec.tasks.length === 0) {
+      const decomposed = await decomposeTask(spec.goal, { cwd, dryRun: tokens.includes('--dry-run') })
+      createCrew(cwd, name, spec.goal, { lead: spec.lead, decomposed })
+    }
     const workersRaw = option(tokens, '--workers')
     const maxTurnsRaw = option(tokens, '--max-turns')
     const events: string[] = []

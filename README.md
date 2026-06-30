@@ -124,7 +124,7 @@ as first-class subcommands in the shipped CLI.
 | --- | --- |
 | `ur` | Start an interactive terminal agent session in the current workspace. |
 | `ur -p` | Run a non-interactive prompt with text, JSON, or stream-JSON output. |
-| `ur spec` | Create requirements, design, and task documents under `.ur/specs/`, then run the task list. |
+| `ur spec` | Create requirements, design, and task documents under `.ur/specs/`, run the task list, and verify with strict proof gates. |
 | `ur escalate` | Plan or run work with fast and oracle model tiers selected from local model capabilities. |
 | `ur arena` | Run multiple agents on the same task in isolated worktrees and surface the winning diff. |
 | `ur ci-loop` | Run a build or test command, hand failures to a fix agent, and retry with a bounded budget. |
@@ -135,7 +135,8 @@ as first-class subcommands in the shipped CLI.
 | `ur worktree` | List, inspect, and clean up UR agent worktrees. |
 | `ur automation` | Store and run project-local scheduled automation specs under `.ur/automations/`. |
 | `ur workflow` | Define, validate, graph, run, and resume declarative agent workflows. |
-| `ur crew` | Run a lead and worker subagent crew over a shared task board. |
+| `ur crew` | Run a lead and worker subagent crew over a shared task board; `--decompose` auto-splits tasks with risk/tests/rollback metadata. |
+| `ur pattern` | Run multi-agent collaboration patterns (PEER, DOE, concurrent, handoff, debate, parallel); `--execute` runs them as a workflow. |
 | `ur goal` | Track long-horizon objectives that persist across sessions. |
 | `ur repo-edit` | Build a repo edit index, plan AST-aware renames, preview patches, and apply with rollback. |
 | `ur code-index` | Build, query, or watch a local semantic code index using Ollama embeddings. |
@@ -171,6 +172,12 @@ Examples:
 ```sh
 ur spec init checkout --goal "1. add cart 2. add payment 3. add receipt"
 ur spec run checkout --all --dry-run
+ur spec run checkout --all --kernel
+ur spec verify checkout --kernel
+ur crew create parser-crew --goal "fix the flaky parser test" --decompose --dry-run
+ur crew plan parser-crew --goal "fix the flaky parser test" --decompose
+ur crew run parser-crew --workers 3 --decompose --dry-run
+ur pattern parallel "refactor login without changing behavior" --execute --dry-run
 ur arena "implement a debounce helper" --agents 2 --dry-run
 ur escalate run "refactor the cache layer" --force-oracle --dry-run
 ur test-first detect
