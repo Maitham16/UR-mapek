@@ -39,6 +39,7 @@ import { join } from 'node:path'
 import type { LocalCommandCall } from '../../types/command.js'
 import { parseArguments } from '../../utils/argumentSubstitution.js'
 import { getCwd } from '../../utils/cwd.js'
+import { isNetworkRestricted } from '../../utils/offlineMode.js'
 
 function optionValue(tokens: string[], flag: string): string | undefined {
   const index = tokens.indexOf(flag)
@@ -273,9 +274,13 @@ export const call: LocalCommandCall = async (args: string) => {
     const maxTurns =
       Number.isFinite(maxTurnsValue) && maxTurnsValue > 0 ? maxTurnsValue : 20
     const model = optionValue(tokens, '--model')
+    const offline = tokens.includes('--offline') || isNetworkRestricted()
     const runner = dryRun
       ? makeDryEvalRunner()
       : makeCliEvalRunner({ cwd, maxTurns, skipPermissions, model })
+    if (offline && !dryRun) {
+      process.env.UR_OFFLINE = '1'
+    }
     const judge = dryRun
       ? makeDryJudgeRunner()
       : makeCliJudgeRunner({ cwd, maxTurns, skipPermissions })
@@ -352,6 +357,7 @@ export const call: LocalCommandCall = async (args: string) => {
     const maxTurnsValue = Number(optionValue(tokens, '--max-turns') ?? '20')
     const maxTurns =
       Number.isFinite(maxTurnsValue) && maxTurnsValue > 0 ? maxTurnsValue : 20
+    const offline = tokens.includes('--offline') || isNetworkRestricted()
     const baseJudge = dryRun
       ? makeDryJudgeRunner()
       : makeCliJudgeRunner({ cwd, maxTurns, skipPermissions })
@@ -362,14 +368,17 @@ export const call: LocalCommandCall = async (args: string) => {
       runnerFactory: () => {
         const base = dryRun
           ? makeDryEvalRunner()
-          : makeCliEvalRunner({ cwd, maxTurns, skipPermissions })
+          : makeCliEvalRunner({ cwd, maxTurns, skipPermissions, model: name })
         return async evalCase => {
           const oldModel = process.env.UR_MODEL
+          const oldOffline = process.env.UR_OFFLINE
           process.env.UR_MODEL = name
+          if (offline) process.env.UR_OFFLINE = '1'
           try {
             return await base(evalCase)
           } finally {
             process.env.UR_MODEL = oldModel
+            process.env.UR_OFFLINE = oldOffline
           }
         }
       },

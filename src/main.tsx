@@ -1291,7 +1291,7 @@ async function run(): Promise<CommanderCommand> {
     const remote = remoteOption === true ? '' : remoteOption ?? null;
 
     // Extract --remote-control / --rc flag (enable bridge in interactive session)
-    const remoteControlOption = (options as {
+    let remoteControlOption = (options as {
       remoteControl?: string | true;
     }).remoteControl ?? (options as {
       rc?: string | true;
@@ -4421,7 +4421,7 @@ async function run(): Promise<CommanderCommand> {
     const args = [action, opts.create ? '--create' : undefined, opts.draft ? '--draft' : undefined, opts.base ? `--base ${quoteLocalCommandArg(opts.base)}` : undefined, opts.title ? `--title ${quoteLocalCommandArg(opts.title)}` : undefined, opts.body ? `--body ${quoteLocalCommandArg(opts.body)}` : undefined, opts.dryRun ? '--dry-run' : undefined, opts.force ? '--force' : undefined, opts.review === false ? '--no-review' : undefined, opts.json ? '--json' : undefined].filter(Boolean).join(' ');
     await runLocalTextCommand(() => import('./commands/agent-task/agent-task.js'), args);
   });
-  program.command('bg [action] [task...]').alias('background-agent').description('Run and manage detached local UR background agents').option('--agents <n>', 'Number of agents for fanout').option('--worktree', 'Run in an isolated git worktree').option('--pr', 'Create a GitHub PR after completion').option('--draft', 'Create the PR as draft').option('--base <branch>', 'Base branch for PR creation').option('--title <title>', 'PR title').option('--body <body>', 'PR body').option('--no-push', 'Do not push the branch before PR creation').option('--model <model>', 'Model override for the background run').option('--max-turns <n>', 'Maximum agentic turns').option('--skip-permissions', 'Pass --dangerously-skip-permissions to the background agent').option('--tail <n>', 'Number of log lines for logs/attach').option('--dry-run', 'Create the task plan without spawning the worker').option('--json', 'Output as JSON').action(async (action: string | undefined, task: string[] = [], opts: {
+  program.command('bg [action] [task...]').alias('background-agent').description('Run and manage detached local UR background agents').option('--agents <n>', 'Number of agents for fanout').option('--worktree', 'Run in an isolated git worktree').option('--pr', 'Create a GitHub PR after completion').option('--draft', 'Create the PR as draft').option('--base <branch>', 'Base branch for PR creation').option('--title <title>', 'PR title').option('--body <body>', 'PR body').option('--no-push', 'Do not push the branch before PR creation').option('--model <model>', 'Model override for the background run').option('--max-turns <n>', 'Maximum agentic turns').option('--skip-permissions', 'Pass --dangerously-skip-permissions to the background agent').option('--tail <n>', 'Number of log lines for logs/attach').option('--dry-run', 'Create the task plan without spawning the worker').option('--offline', 'Run background agent in local-first mode (cloud APIs disabled)').option('--json', 'Output as JSON').action(async (action: string | undefined, task: string[] = [], opts: {
     agents?: string;
     worktree?: boolean;
     pr?: boolean;
@@ -4435,9 +4435,10 @@ async function run(): Promise<CommanderCommand> {
     skipPermissions?: boolean;
     tail?: string;
     dryRun?: boolean;
+    offline?: boolean;
     json?: boolean;
   }) => {
-    const args = [action, ...task, opts.agents ? `--agents ${opts.agents}` : undefined, opts.worktree ? '--worktree' : undefined, opts.pr ? '--pr' : undefined, opts.draft ? '--draft' : undefined, opts.base ? `--base ${quoteLocalCommandArg(opts.base)}` : undefined, opts.title ? `--title ${quoteLocalCommandArg(opts.title)}` : undefined, opts.body ? `--body ${quoteLocalCommandArg(opts.body)}` : undefined, opts.push === false ? '--no-push' : undefined, opts.model ? `--model ${quoteLocalCommandArg(opts.model)}` : undefined, opts.maxTurns ? `--max-turns ${opts.maxTurns}` : undefined, opts.skipPermissions ? '--skip-permissions' : undefined, opts.tail ? `--tail ${opts.tail}` : undefined, opts.dryRun ? '--dry-run' : undefined, opts.json ? '--json' : undefined].filter(Boolean).join(' ');
+    const args = [action, ...task, opts.agents ? `--agents ${opts.agents}` : undefined, opts.worktree ? '--worktree' : undefined, opts.pr ? '--pr' : undefined, opts.draft ? '--draft' : undefined, opts.base ? `--base ${quoteLocalCommandArg(opts.base)}` : undefined, opts.title ? `--title ${quoteLocalCommandArg(opts.title)}` : undefined, opts.body ? `--body ${quoteLocalCommandArg(opts.body)}` : undefined, opts.push === false ? '--no-push' : undefined, opts.model ? `--model ${quoteLocalCommandArg(opts.model)}` : undefined, opts.maxTurns ? `--max-turns ${opts.maxTurns}` : undefined, opts.skipPermissions ? '--skip-permissions' : undefined, opts.tail ? `--tail ${opts.tail}` : undefined, opts.dryRun ? '--dry-run' : undefined, opts.offline ? '--offline' : undefined, opts.json ? '--json' : undefined].filter(Boolean).join(' ');
     await runLocalTextCommand(() => import('./commands/bg/bg.js'), args);
   });
   program.command('worktree [action] [id]').alias('worktrees').description('List, inspect, and clean up UR agent worktrees').option('--dry-run', 'Show what would be cleaned without removing anything').option('--json', 'Output as JSON').action(async (action: string | undefined, id: string | undefined, opts: {
@@ -4642,7 +4643,7 @@ async function run(): Promise<CommanderCommand> {
     const args = [action, ...commandArg, opts.json ? '--json' : undefined].filter(Boolean).join(' ');
     await runLocalTextCommand(() => import('./commands/sandbox/sandbox.js'), args);
   });
-  program.command('task [action] [name]').alias('taskctl').description('Start, run, and hand off worktree-per-task sessions. Each task can run in its own git branch/worktree for safe parallel work.').option('--worktree', 'Create a git branch and worktree for this task').option('--base <branch>', 'Base branch for the task worktree').option('--model <model>', 'Model override for the task agent').option('--max-turns <n>', 'Max agentic turns').option('--draft', 'Create PR as draft').option('--create', 'Create the PR from the task worktree').option('--title <text>', 'PR title').option('--body <text>', 'PR body').option('--dry-run', 'Preview PR without creating it').option('--json', 'Output as JSON').action(async (action: string | undefined, name: string | undefined, opts: {
+  program.command('task [action] [name]').alias('taskctl').description('Start, run, and hand off worktree-per-task sessions. Each task can run in its own git branch/worktree for safe parallel work.').option('--worktree', 'Create a git branch and worktree for this task').option('--base <branch>', 'Base branch for the task worktree').option('--model <model>', 'Model override for the task agent').option('--max-turns <n>', 'Max agentic turns').option('--draft', 'Create PR as draft').option('--create', 'Create the PR from the task worktree').option('--title <text>', 'PR title').option('--body <text>', 'PR body').option('--dry-run', 'Preview PR without creating it').option('--offline', 'Run task in local-first mode (cloud APIs disabled)').option('--json', 'Output as JSON').action(async (action: string | undefined, name: string | undefined, opts: {
     worktree?: boolean;
     base?: string;
     model?: string;
@@ -4652,6 +4653,7 @@ async function run(): Promise<CommanderCommand> {
     title?: string;
     body?: string;
     dryRun?: boolean;
+    offline?: boolean;
     json?: boolean;
   }) => {
     const args = [
@@ -4666,6 +4668,7 @@ async function run(): Promise<CommanderCommand> {
       opts.title ? `--title ${quoteLocalCommandArg(opts.title)}` : undefined,
       opts.body ? `--body ${quoteLocalCommandArg(opts.body)}` : undefined,
       opts.dryRun ? '--dry-run' : undefined,
+      opts.offline ? '--offline' : undefined,
       opts.json ? '--json' : undefined,
     ].filter(Boolean).join(' ');
     await runLocalTextCommand(() => import('./commands/task/task.js'), args);
@@ -4726,7 +4729,7 @@ async function run(): Promise<CommanderCommand> {
     const args = [action, ...rest, opts.note ? '--note' : undefined, opts.label ? `--label ${quoteLocalCommandArg(opts.label)}` : undefined, opts.embeddings ? '--embeddings' : undefined, opts.embedModel ? `--embed-model ${quoteLocalCommandArg(opts.embedModel)}` : undefined, opts.olderThan ? `--older-than ${opts.olderThan}` : undefined, opts.json ? '--json' : undefined].filter(Boolean).join(' ');
     await runLocalTextCommand(() => import('./commands/knowledge/knowledge.js'), args);
   });
-  program.command('eval [action] [name] [rest...]').alias('evals').description('Public agent eval harness: init, list, validate, run, report, compare, route, builtin, leaderboard, benchmark adapters').option('--file <path>', 'Local benchmark JSON/JSONL file for eval bench').option('--name <suite>', 'Suite name when importing a benchmark adapter').option('--limit <n>', 'Limit imported benchmark records').option('--dry-run', 'Run offline without calling any model').option('--metrics', 'Write per-case metrics files after running').option('--model <model>', 'Model override for eval runs').option('--strategy <auto|cheap|strong|default>', 'Model routing strategy for eval route').option('--category <c>', 'Only run cases in this category').option('--max-turns <n>', 'Max agentic turns per case when running').option('--skip-permissions', 'Pass --dangerously-skip-permissions to each case (sandboxes only)').option('--force', 'Overwrite existing files on init/import').option('--json', 'Output as JSON').action(async (action: string | undefined, name: string | undefined, rest: string[] = [], opts: {
+  program.command('eval [action] [name] [rest...]').alias('evals').description('Public agent eval harness: init, list, validate, run, report, compare, route, builtin, leaderboard, benchmark adapters').option('--file <path>', 'Local benchmark JSON/JSONL file for eval bench').option('--name <suite>', 'Suite name when importing a benchmark adapter').option('--limit <n>', 'Limit imported benchmark records').option('--dry-run', 'Run offline without calling any model').option('--metrics', 'Write per-case metrics files after running').option('--model <model>', 'Model override for eval runs').option('--strategy <auto|cheap|strong|default>', 'Model routing strategy for eval route').option('--category <c>', 'Only run cases in this category').option('--max-turns <n>', 'Max agentic turns per case when running').option('--skip-permissions', 'Pass --dangerously-skip-permissions to each case (sandboxes only)').option('--offline', 'Run eval in local-first mode (cloud APIs disabled)').option('--force', 'Overwrite existing files on init/import').option('--json', 'Output as JSON').action(async (action: string | undefined, name: string | undefined, rest: string[] = [], opts: {
     file?: string;
     name?: string;
     limit?: string;
@@ -4737,10 +4740,11 @@ async function run(): Promise<CommanderCommand> {
     category?: string;
     maxTurns?: string;
     skipPermissions?: boolean;
+    offline?: boolean;
     force?: boolean;
     json?: boolean;
   }) => {
-    const args = [action, name, ...rest, opts.file ? `--file ${quoteLocalCommandArg(opts.file)}` : undefined, opts.name ? `--name ${quoteLocalCommandArg(opts.name)}` : undefined, opts.limit ? `--limit ${opts.limit}` : undefined, opts.dryRun ? '--dry-run' : undefined, opts.metrics ? '--metrics' : undefined, opts.model ? `--model ${quoteLocalCommandArg(opts.model)}` : undefined, opts.strategy ? `--strategy ${quoteLocalCommandArg(opts.strategy)}` : undefined, opts.category ? `--category ${quoteLocalCommandArg(opts.category)}` : undefined, opts.maxTurns ? `--max-turns ${opts.maxTurns}` : undefined, opts.skipPermissions ? '--skip-permissions' : undefined, opts.force ? '--force' : undefined, opts.json ? '--json' : undefined].filter(Boolean).join(' ');
+    const args = [action, name, ...rest, opts.file ? `--file ${quoteLocalCommandArg(opts.file)}` : undefined, opts.name ? `--name ${quoteLocalCommandArg(opts.name)}` : undefined, opts.limit ? `--limit ${opts.limit}` : undefined, opts.dryRun ? '--dry-run' : undefined, opts.metrics ? '--metrics' : undefined, opts.model ? `--model ${quoteLocalCommandArg(opts.model)}` : undefined, opts.strategy ? `--strategy ${quoteLocalCommandArg(opts.strategy)}` : undefined, opts.category ? `--category ${quoteLocalCommandArg(opts.category)}` : undefined, opts.maxTurns ? `--max-turns ${opts.maxTurns}` : undefined, opts.skipPermissions ? '--skip-permissions' : undefined, opts.offline ? '--offline' : undefined, opts.force ? '--force' : undefined, opts.json ? '--json' : undefined].filter(Boolean).join(' ');
     await runLocalTextCommand(() => import('./commands/eval/eval.js'), args);
   });
   program.command('code-index [action] [query...]').alias('codeindex').description('Build and query a local semantic code index (embeddings via the local Ollama app)').option('--graph', 'Also build or watch the structural code graph').option('--repo', 'Also build or watch the semantic repo index').option('--dry-run', 'Preview watch mode without starting a watcher').option('--json', 'Output as JSON').action(async (action: string | undefined, query: string[] = [], opts: {

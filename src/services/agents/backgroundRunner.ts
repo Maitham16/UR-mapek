@@ -33,6 +33,7 @@ export type BackgroundTask = {
   model?: string
   maxTurns?: number
   skipPermissions?: boolean
+  offline?: boolean
   workerPid?: number
   agentPid?: number
   exitCode?: number
@@ -82,6 +83,7 @@ export type StartBackgroundTaskOptions = {
   maxTurns?: number
   skipPermissions?: boolean
   dryRun?: boolean
+  offline?: boolean
   bin?: { file: string; baseArgs: string[] }
 }
 
@@ -276,6 +278,7 @@ export function createBackgroundTask(
           push: options.push ?? true,
         }
       : undefined,
+    offline: options.offline,
     createdAt,
     updatedAt: createdAt,
   }
@@ -302,6 +305,9 @@ async function resolveTaskEnv(task: BackgroundTask): Promise<NodeJS.ProcessEnv> 
   if (model) {
     base.UR_MODEL = model
     base.OLLAMA_MODEL = model
+  }
+  if ((task as { offline?: boolean }).offline) {
+    base.UR_OFFLINE = '1'
   }
   return base
 }

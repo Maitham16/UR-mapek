@@ -12,6 +12,7 @@ import {
   startBackgroundTask,
   stopBackgroundTask,
 } from '../../services/agents/backgroundRunner.js'
+import { isNetworkRestricted } from '../../utils/offlineMode.js'
 
 function option(tokens: string[], name: string): string | undefined {
   const index = tokens.indexOf(name)
@@ -75,6 +76,7 @@ function startOptions(tokens: string[], task: string) {
     maxTurns: numberOption(tokens, '--max-turns'),
     skipPermissions: tokens.includes('--skip-permissions'),
     dryRun: tokens.includes('--dry-run'),
+    offline: tokens.includes('--offline'),
   }
 }
 
@@ -92,7 +94,14 @@ export const call: LocalCommandCall = async (args: string) => {
   if (action === 'run') {
     const task = pos.slice(1).join(' ').trim()
     if (!task) return { type: 'text', value: usage() }
-    const result = await startBackgroundTask(startOptions(tokens, task))
+    const options = startOptions(tokens, task)
+    if (options.offline && isNetworkRestricted()) {
+      return { type: 'text', value: 'Background task is already running in offline/local-first mode.' }
+    }
+    if (options.offline) {
+      process.env.UR_OFFLINE = '1'
+    }
+    const result = await startBackgroundTask(options)
     if (json) return { type: 'text', value: JSON.stringify(result, null, 2) }
     return {
       type: 'text',

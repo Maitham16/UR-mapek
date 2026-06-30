@@ -23,6 +23,7 @@ import {
   type BackgroundTask,
 } from '../../services/agents/backgroundRunner.js'
 import { buildPrSummary, formatPrSummary } from '../../services/agents/prSummary.js'
+import { isNetworkRestricted } from '../../utils/offlineMode.js'
 
 function usage(): string {
   return [
@@ -81,6 +82,7 @@ function formatTask(task: BackgroundTask, json: boolean): string {
     `Branch: ${task.branch ?? 'none'}`,
     `Worktree: ${task.worktree?.enabled ? task.worktree.path : 'disabled'}`,
     `Model: ${task.model ?? 'default'}`,
+    `Offline: ${task.offline ? 'yes' : 'no'}`,
     `Log: ${task.logFile}`,
   ]
   if (task.pr?.enabled) {
@@ -108,6 +110,7 @@ export const call: LocalCommandCall = async (args: string) => {
     const worktree = tokens.includes('--worktree')
     const model = option(tokens, '--model')
     const maxTurns = option(tokens, '--max-turns')
+    const offline = tokens.includes('--offline') || isNetworkRestricted()
     const task = createBackgroundTask({
       cwd,
       task: name,
@@ -118,6 +121,7 @@ export const call: LocalCommandCall = async (args: string) => {
       body: `This change was produced by \`ur task start ${name}\` running in an isolated UR worktree.`,
       model,
       maxTurns: maxTurns ? parseInt(maxTurns, 10) : undefined,
+      offline,
     })
     return { type: 'text', value: formatTask(task, json) }
   }
@@ -127,6 +131,9 @@ export const call: LocalCommandCall = async (args: string) => {
     if (!id) return { type: 'text', value: usage() }
     const existing = getBackgroundTask(cwd, id) ?? listBackgroundTasks(cwd).find(t => t.id.startsWith(id))
     if (!existing) return { type: 'text', value: `Task ${id} not found.` }
+    if (tokens.includes('--offline') && !isNetworkRestricted()) {
+      process.env.UR_OFFLINE = '1'
+    }
     const result = startExistingBackgroundTask(cwd, existing.id, {
       dryRun: tokens.includes('--dry-run'),
     })

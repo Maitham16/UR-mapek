@@ -1,5 +1,6 @@
 import type { AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS } from '../../services/analytics/index.js'
 import { isEnvTruthy } from '../envUtils.js'
+import { isNetworkRestricted } from '../offlineMode.js'
 
 export type APIProvider =
   | 'firstParty'
@@ -10,6 +11,10 @@ export type APIProvider =
 
 export function getAPIProvider(): APIProvider {
   return 'ollama'
+}
+
+export function isCloudProvider(provider: APIProvider): boolean {
+  return provider !== 'ollama'
 }
 
 export function getAPIProviderForStatsig(): AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS {
