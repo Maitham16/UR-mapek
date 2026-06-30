@@ -7,7 +7,7 @@ Reproduce, root-cause, and fix the described bug in an isolated worktree. Produc
 
 ## Setup
 
-1. Use the ${AGENT_TOOL_NAME} tool with \\"isolation: worktree\\" to create a fresh git worktree and branch named \\"ur/debug-<timestamp>-<slug>\\".
+1. Use the ${AGENT_TOOL_NAME} tool with \\"isolation: worktree\\" and model \\"route: strong\\" to create a fresh git worktree and branch named \\"ur/debug-<timestamp>-<slug>\\". This task needs a strong coding model.
 2. Inside the worktree, inspect the relevant files, tests, and reproduction steps. Read the current git state with \\"git status\\" and \\"git log --oneline -5\\".
 
 ## Reproduction

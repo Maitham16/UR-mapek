@@ -7,7 +7,7 @@ Audit code for security issues in an isolated worktree. Fix only what is safe an
 
 ## Setup
 
-1. Use the ${AGENT_TOOL_NAME} tool with "isolation: worktree" to create a fresh git worktree and branch named "ur/security-<timestamp>-<slug>".
+1. Use the ${AGENT_TOOL_NAME} tool with "isolation: worktree" and model "route: strong" to create a fresh git worktree and branch named "ur/security-<timestamp>-<slug>". This task needs a strong model for security analysis.
 2. Identify the target surface: file paths, entry points, dependencies, or user-facing inputs.
 
 ## Audit checklist

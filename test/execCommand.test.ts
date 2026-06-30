@@ -27,10 +27,10 @@ describe('ur exec command', () => {
     }
   })
 
-  test('runExecPool dry-run returns commands without spawning', () => {
+  test('runExecPool dry-run returns commands without spawning', async () => {
     const dir = tempDir('ur-exec-')
     try {
-      const results = runExecPool(['add tests', 'fix bug'], {
+      const results = await runExecPool(['add tests', 'fix bug'], {
         cwd: dir,
         concurrency: 2,
         dryRun: true,

@@ -70,12 +70,36 @@ function formatBenchmarkAdapters(json: boolean): string {
   ].join('\n')
 }
 
+const EVAL_FLAGS_WITH_VALUES = new Set([
+  '--file',
+  '--name',
+  '--limit',
+  '--category',
+  '--max-turns',
+  '--model',
+  '--strategy',
+  '--format',
+])
+
+function stripFlagValues(tokens: string[]): string[] {
+  const result: string[] = []
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i]
+    if (EVAL_FLAGS_WITH_VALUES.has(token)) {
+      i++ // skip value
+      continue
+    }
+    result.push(token)
+  }
+  return result
+}
+
 export const call: LocalCommandCall = async (args: string) => {
   const cwd = getCwd()
   const tokens = parseArguments(args)
   const json = tokens.includes('--json')
   const force = tokens.includes('--force')
-  const positional = tokens.filter(token => !token.startsWith('--'))
+  const positional = stripFlagValues(tokens).filter(token => !token.startsWith('--'))
   const command = positional[0] ?? 'list'
   const name = positional[1]
 

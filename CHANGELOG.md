@@ -2,6 +2,27 @@
 
 ## 1.22.7
 
+### Added
+- **Benchmark mode (`ur eval`).**
+  - `ur eval run <suite> [--model <m>] [--metrics]` runs eval suites with explicit model overrides and per-case metrics files.
+  - `ur eval report <suite>` now surfaces rollbacks, test pass rate, files changed, command failures, human edits, cost, time, and tokens.
+  - `ur eval compare <suite> <label1> <label2>...` runs the same suite against multiple model/runner labels and prints a comparison matrix.
+  - `ur eval route "<task>" [--strategy auto|cheap|strong|default]` recommends a model using the capability router.
+- **Public leaderboard and built-in benchmark suites.**
+  - `ur eval builtin list` shows six small built-in suites: `bug-fix`, `refactor`, `test-gen`, `docker-repair`, `ts-migrate`, `py-package-repair`.
+  - `ur eval builtin <id>` installs a suite under `.ur/evals/`.
+  - `ur eval leaderboard [--format html|json|md] [<suite>]` writes a public leaderboard from saved reports.
+- **Model routing integration.**
+  - Added `RouteStrategy`, `ModelPool`, and `resolveModelForTask` in `src/services/agents/modelRouter.ts` with `src/services/agents/modelPool.ts` config.
+  - `makeCliEvalRunner` accepts a per-run `model` override.
+  - Background tasks (`startBackgroundTask`) support `routeStrategy` and resolve the model from the local pool before spawning.
+  - Bundled skills (`debug-v2`, `security-review`, `refactor`, `benchmark`, `dockerize`) now prompt the agent to use `route: strong/auto` hints.
+
+### Changed
+- `ur eval` CLI now accepts `[action] [name] [rest...]` and `--model` / `--strategy` flags to support compare and route subcommands.
+- `EvalRunMetrics` gained `rollbacks`; `EvalReport` gained `totalRollbacks`; report and dashboard now display them.
+- `startBackgroundTask` and `fanoutBackgroundTasks` are now async so they can resolve model routing from local capabilities.
+
 ### Fixed
 - Fixed `ur task run <id>` so it starts the queued worktree task created by
   `ur task start` instead of creating a second background task whose prompt is
@@ -19,6 +40,8 @@
 ### Verified
 - Added focused coverage for approval-level mapping, `ur task start` to
   `ur task run`, PR-quality output sections, and CI-loop failure memory.
+- Added `test/evalCompare.test.ts` and `test/evalBenchmarkSuites.test.ts` for compare matrices, built-in suites, and leaderboard rendering.
+- Updated `test/execCommand.test.ts` for the async `runExecPool` signature.
 - Verified source and production bundle release checks for the `1.22.7` build.
 
 ## 1.22.6

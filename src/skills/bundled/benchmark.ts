@@ -7,7 +7,7 @@ Add or run benchmarks for a specific component in an isolated worktree. Collect 
 
 ## Setup
 
-1. Use the ${AGENT_TOOL_NAME} tool with "isolation: worktree" to create a fresh git worktree and branch named "ur/benchmark-<timestamp>-<slug>".
+1. Use the ${AGENT_TOOL_NAME} tool with "isolation: worktree" and model "route: auto" to create a fresh git worktree and branch named "ur/benchmark-<timestamp>-<slug>". UR will pick a cheap or strong model based on the benchmark complexity.
 2. Identify the target component and the existing benchmark tooling (e.g., <code>benchmark</code>, <code>denote</code>, <code>vitest bench</code>, <code>hyperfine</code>, shell <code>time</code>).
 
 ## Plan

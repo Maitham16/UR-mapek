@@ -7,7 +7,7 @@ Add production-ready Docker support to the project in an isolated worktree. Incl
 
 ## Setup
 
-1. Use the ${AGENT_TOOL_NAME} tool with "isolation: worktree" to create a fresh git worktree and branch named "ur/dockerize-<timestamp>-<slug>".
+1. Use the ${AGENT_TOOL_NAME} tool with "isolation: worktree" and model "route: auto" to create a fresh git worktree and branch named "ur/dockerize-<timestamp>-<slug>". UR will pick a cheap or strong model based on the project complexity.
 2. Inspect the project: runtime, package manager, ports, environment variables, build command, and start command.
 
 ## Files to create

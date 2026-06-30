@@ -7,7 +7,7 @@ Perform a safe refactoring in an isolated worktree. Preserve behavior, add or up
 
 ## Setup
 
-1. Use the ${AGENT_TOOL_NAME} tool with "isolation: worktree" to create a fresh git worktree and branch named "ur/refactor-<timestamp>-<slug>".
+1. Use the ${AGENT_TOOL_NAME} tool with "isolation: worktree" and model "route: auto" to create a fresh git worktree and branch named "ur/refactor-<timestamp>-<slug>". UR will pick a cheap or strong model based on the refactor complexity.
 2. Read the current code, tests, and the user's target description. Run the existing test/lint/typecheck command to establish a green baseline.
 
 ## Plan
