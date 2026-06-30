@@ -82,4 +82,39 @@ describe('agentSkillRunner', () => {
       rmSync(dir, { recursive: true, force: true })
     }
   })
+
+  test('each agent skill task receives a distinct worktree branch and PR contract', async () => {
+    const dir = tempDir('ur-agent-skill-isolation-')
+    try {
+      const first = await runAgentSkill({
+        cwd: dir,
+        skill: 'debug-v2',
+        prompt: 'fix parser bug',
+        dryRun: true,
+        pollMs: 50,
+      })
+      const second = await runAgentSkill({
+        cwd: dir,
+        skill: 'refactor',
+        prompt: 'refactor parser helpers',
+        dryRun: true,
+        pollMs: 50,
+      })
+
+      expect(first.taskId).not.toBe(second.taskId)
+      expect(first.branch).not.toBe(second.branch)
+      expect(first.worktreePath).not.toBe(second.worktreePath)
+
+      const firstTask = getBackgroundTask(dir, first.taskId)
+      const secondTask = getBackgroundTask(dir, second.taskId)
+      expect(firstTask?.worktree?.enabled).toBe(true)
+      expect(secondTask?.worktree?.enabled).toBe(true)
+      expect(firstTask?.pr?.enabled).toBe(true)
+      expect(secondTask?.pr?.enabled).toBe(true)
+      expect(firstTask?.worktree?.path).toContain('.ur/worktrees/')
+      expect(secondTask?.worktree?.path).toContain('.ur/worktrees/')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
 })

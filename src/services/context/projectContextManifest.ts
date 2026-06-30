@@ -3,6 +3,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  statSync,
   writeFileSync,
 } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
@@ -91,6 +92,62 @@ function existing(cwd: string, names: string[]): string[] {
   return names.filter(name => existsSync(join(cwd, name)))
 }
 
+function existingFilesInDir(
+  cwd: string,
+  dir: string,
+  extensions: string[],
+): string[] {
+  const absoluteDir = join(cwd, dir)
+  if (!existsSync(absoluteDir) || !statSync(absoluteDir).isDirectory()) return []
+  return readdirSync(absoluteDir)
+    .filter(file => extensions.some(extension => file.endsWith(extension)))
+    .sort()
+    .map(file => `${dir}/${file}`)
+}
+
+function instructionFiles(cwd: string): string[] {
+  return [
+    ...existing(cwd, [
+      'AGENTS.md',
+      'UR.md',
+      'UR.local.md',
+      'CLAUDE.md',
+      '.cursorrules',
+      '.windsurfrules',
+      '.github/copilot-instructions.md',
+    ]),
+    ...existingFilesInDir(cwd, '.cursor/rules', ['.mdc', '.md']),
+  ]
+}
+
+function manifestFiles(cwd: string): string[] {
+  return [
+    ...existing(cwd, [
+      'package.json',
+      'bun.lock',
+      'bunfig.toml',
+      'tsconfig.json',
+      'jsconfig.json',
+      'biome.json',
+      'eslint.config.js',
+      'pyproject.toml',
+      'requirements.txt',
+      'Cargo.toml',
+      'go.mod',
+      'Dockerfile',
+      'docker-compose.yml',
+      'compose.yml',
+      '.editorconfig',
+      '.mcp.json',
+      '.ur/verify.json',
+      '.ur/safety-policy.json',
+      '.vscode/settings.json',
+      '.zed/settings.json',
+    ]),
+    ...existingFilesInDir(cwd, '.github/workflows', ['.yml', '.yaml']),
+  ]
+}
+
 function packageScripts(pkg: Record<string, unknown> | null, matcher: RegExp): string[] {
   const scripts = pkg?.scripts
   if (!scripts || typeof scripts !== 'object') return []
@@ -103,15 +160,6 @@ export function buildProjectContextManifest(cwd: string): ProjectContextManifest
   const dna = detectProjectDna(cwd)
   const pkg = readPackage(cwd)
   const packageName = typeof pkg?.name === 'string' ? pkg.name : 'project'
-  const manifestFiles = existing(cwd, [
-    'package.json',
-    'bunfig.toml',
-    'tsconfig.json',
-    '.ur/verify.json',
-    '.ur/safety-policy.json',
-    '.mcp.json',
-  ])
-  const instructionFiles = existing(cwd, ['AGENTS.md', 'UR.md', 'UR.local.md'])
   const release = packageScripts(pkg, /^(release|package|smoke|secrets|prepack)/)
   return {
     version: 1,
@@ -124,8 +172,8 @@ export function buildProjectContextManifest(cwd: string): ProjectContextManifest
       packageManagers: dna.packageManagers,
       importantFolders: dna.importantFolders,
     },
-    instructionFiles,
-    manifests: manifestFiles,
+    instructionFiles: instructionFiles(cwd),
+    manifests: manifestFiles(cwd),
     commands: {
       compile: dna.buildCommands,
       test: dna.testCommands,
@@ -135,8 +183,9 @@ export function buildProjectContextManifest(cwd: string): ProjectContextManifest
     },
     architectureRules: [
       'Prefer package scripts and project manifests before inventing commands.',
-      'Treat AGENTS.md and UR.md as shared architecture instructions when present.',
+      'Treat AGENTS.md, UR.md, Cursor rules, and other agent instruction files as shared architecture instructions when present.',
       'Use .ur/verify.json and .ur/safety-policy.json as executable project constraints.',
+      'Use MCP, editor, package-manager, workflow, and language manifests to infer architecture rules and available commands.',
       'Keep generated runtime state under .ur/ unless a command documents another path.',
     ],
     constraints: [

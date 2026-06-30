@@ -162,6 +162,8 @@ UR includes slash commands and CLI subcommands for common workflows:
 - `ur safety ...` to inspect project shell safety policy and preview command risk
 - `ur context-pack ...` to summarize architecture and persist project memory (decisions, constraints, commands, diffs, architecture, preferences, attempts, accepted, rejected)
 - `ur code-index watch` to keep the local semantic code index fresh
+- `ur code-index repo build` to build a richer semantic repo index (files, symbols, calls, tests, docs, configs)
+- `ur skill init ...` and `ur skill run ...` for executable skill workflows
 - `ur memory retention ...` to prune project-local memory by TTL, max entries, and decay
 - `ur spec ...` to scaffold requirements, design, and tasks, run a spec task list, and verify with strict proof gates
 - `ur escalate ...` to plan, run, or ask an oracle model for hard tasks
@@ -197,6 +199,10 @@ ur arena "implement a debounce helper" --agents 2 --dry-run
 ur escalate run "refactor the cache layer" --force-oracle --dry-run
 ur test-first detect
 ur test-first --dry-run
+ur skill init security-review
+ur skill run security-review "src/auth.ts"
+ur code-index repo build
+ur code-index repo search "rate limiter"
 ur test-first install
 ur safety status
 ur safety check --command "rm -rf build"

@@ -10,7 +10,7 @@
 import type { AgentKernel, KernelContext, KernelResult, KernelStage } from './kernel.js'
 import { runKernelStage } from './kernel.js'
 import type { SpecMeta, SpecRunResult, SpecTask } from './spec.js'
-import { loadSpec, parseTasks, readPhase } from './spec.js'
+import { loadSpec, markTaskDone, parseTasks, readPhase, writePhase } from './spec.js'
 import type { SpecVerifyResult } from './specVerifier.js'
 
 export type SpecRunStage = KernelStage & {
@@ -24,6 +24,10 @@ function isSpecRunStage(stage: KernelStage): stage is SpecRunStage {
 
 function asSpecRunStage(stage: KernelStage): SpecRunStage | null {
   return isSpecRunStage(stage) ? stage : null
+}
+
+function stageSucceeded(result: KernelResult): boolean {
+  return result.verdict === 'PASS' && !result.isError
 }
 
 export function planSpecRun(cwd: string, name: string): KernelStage[] {
@@ -63,10 +67,10 @@ export function mapStageResultsToSpecRunResult(
   const ran = pairs.map(p => ({
     id: p.stage.meta.taskId,
     title: p.stage.meta.taskTitle,
-    status: (p.result.verdict === 'FAIL' || p.result.isError ? 'failed' : 'done') as 'done' | 'failed',
+    status: (stageSucceeded(p.result) ? 'done' : 'failed') as 'done' | 'failed',
   }))
 
-  const stoppedOnFailure = pairs.some(p => p.result.verdict === 'FAIL' || p.result.isError)
+  const stoppedOnFailure = pairs.some(p => !stageSucceeded(p.result))
   return {
     name: spec.name,
     ran,
@@ -96,7 +100,13 @@ export async function runSpecWithKernel(
       runner: options.runner,
     })
     results.push(result)
-    if ((result.verdict === 'FAIL' || result.isError) && stage.context.stopOnError !== false) break
+    const succeeded = stageSucceeded(result)
+    if (!succeeded && stage.context.stopOnError !== false) break
+    const specStage = asSpecRunStage(stage)
+    if (succeeded && specStage && !options.dryRun) {
+      const tasksMd = readPhase(cwd, name, 'tasks') ?? ''
+      writePhase(cwd, name, 'tasks', markTaskDone(tasksMd, specStage.meta.taskId))
+    }
     if (!options.all) break
   }
 

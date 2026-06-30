@@ -84,6 +84,37 @@ describe('eval child metrics', () => {
     expect(report.totalOutputTokens).toBe(20)
   })
 
+  test('failing testCommand fails the eval case and increments command failures', async () => {
+    const suite: EvalSuite = {
+      version: 1,
+      name: 'test-command',
+      cases: [
+        {
+          id: 'a',
+          category: 'coding',
+          prompt: 'p',
+          expect: { contains: ['ok'], testCommand: 'bun test focused.test.ts' },
+        },
+      ],
+    }
+    const runner: EvalRunner = async () => ({
+      output: 'ok',
+      metrics: {
+        durationMs: 0,
+        commandFailures: 1,
+        testCommand: 'bun test focused.test.ts',
+        testPassed: false,
+      },
+    })
+    const report = await runSuite(suite, runner)
+    expect(report.passed).toBe(0)
+    expect(report.failed).toBe(1)
+    expect(report.testPassRate).toBe(0)
+    expect(report.totalCommandFailures).toBe(1)
+    expect(report.cases[0].checks.some(check => check.name.startsWith('test command:') && !check.passed)).toBe(true)
+    expect(report.totalDurationMs).toBeGreaterThanOrEqual(0)
+  })
+
   test('child metrics file serialization round-trip', async () => {
     const dir = tempDir('ur-eval-child-')
     const file = join(dir, 'metrics.json')

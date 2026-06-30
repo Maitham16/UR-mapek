@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import {
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -35,6 +36,17 @@ function writeProject(dir: string): void {
   writeFileSync(join(dir, 'bun.lock'), '')
   writeFileSync(join(dir, 'AGENTS.md'), 'Use repository scripts.\n')
   writeFileSync(join(dir, 'UR.md'), 'Keep task decisions.\n')
+  writeFileSync(join(dir, '.cursorrules'), 'Prefer project rules.\n')
+  mkdirSync(join(dir, '.cursor', 'rules'), { recursive: true })
+  writeFileSync(join(dir, '.cursor', 'rules', 'architecture.mdc'), 'Layer boundaries.\n')
+  mkdirSync(join(dir, '.github'), { recursive: true })
+  writeFileSync(join(dir, '.github', 'copilot-instructions.md'), 'Use tests first.\n')
+  mkdirSync(join(dir, '.github', 'workflows'), { recursive: true })
+  writeFileSync(join(dir, '.github', 'workflows', 'ci.yml'), 'name: ci\n')
+  mkdirSync(join(dir, '.ur'), { recursive: true })
+  writeFileSync(join(dir, '.ur', 'verify.json'), '{"afterEdit":["bun test"]}\n')
+  writeFileSync(join(dir, '.mcp.json'), '{"mcpServers":{}}\n')
+  writeFileSync(join(dir, 'Dockerfile'), 'FROM scratch\n')
   writeFileSync(join(dir, 'tsconfig.json'), '{}')
 }
 
@@ -46,13 +58,21 @@ describe('project context pack', () => {
       const manifest = writeProjectContextManifest(dir)
       expect(manifest.project.name).toBe('context-pack-fixture')
       expect(manifest.instructionFiles).toContain('AGENTS.md')
+      expect(manifest.instructionFiles).toContain('.cursorrules')
+      expect(manifest.instructionFiles).toContain('.cursor/rules/architecture.mdc')
+      expect(manifest.instructionFiles).toContain('.github/copilot-instructions.md')
       expect(manifest.manifests).toContain('package.json')
+      expect(manifest.manifests).toContain('.mcp.json')
+      expect(manifest.manifests).toContain('.ur/verify.json')
+      expect(manifest.manifests).toContain('.github/workflows/ci.yml')
+      expect(manifest.manifests).toContain('Dockerfile')
       expect(manifest.commands.compile).toContain('bun run typecheck')
       expect(manifest.commands.test).toContain('bun run test')
       expect(existsSync(projectManifestPath(dir))).toBe(true)
-      expect(readFileSync(architectureSummaryPath(dir), 'utf8')).toContain(
-        'Architecture Rules',
-      )
+      const architecture = readFileSync(architectureSummaryPath(dir), 'utf8')
+      expect(architecture).toContain('Architecture Rules')
+      expect(architecture).toContain('Cursor rules')
+      expect(architecture).toContain('.github/workflows/ci.yml')
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }

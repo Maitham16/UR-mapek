@@ -4,6 +4,7 @@ import { registerCleanup } from '../cleanupRegistry.js'
 import { logForDebugging } from '../debug.js'
 import { buildCodeGraph } from './graph.js'
 import { buildOrUpdateIndex } from './indexer.js'
+import { buildRepoIndex } from './repoIndex.js'
 
 const WATCH_EXTENSIONS = new Set([
   '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.mts', '.cts',
@@ -21,6 +22,7 @@ const SKIP_SEGMENTS = new Set(['node_modules', '.git', 'dist', 'build', '.ur'])
 export type CodeIndexWatchOptions = {
   root: string
   graph?: boolean
+  repo?: boolean
   debounceMs?: number
   onStatus?: (message: string) => void
   onError?: (message: string) => void
@@ -70,6 +72,12 @@ async function rebuild(options: CodeIndexWatchOptions): Promise<void> {
     const signal = new AbortController().signal
     const { stats } = await buildOrUpdateIndex({ root: options.root, signal })
     if (options.graph) await buildCodeGraph({ root: options.root, signal })
+    if (options.repo) {
+      const repoStats = await buildRepoIndex({ root: options.root, signal })
+      options.onStatus?.(
+        `repo-index refreshed: ${repoStats.repo.files.length} files, ${repoStats.symbols.symbols.length} symbols`,
+      )
+    }
     options.onStatus?.(
       `code-index refreshed: ${stats.filesIndexed} files, ${stats.chunksEmbedded} embedded`,
     )

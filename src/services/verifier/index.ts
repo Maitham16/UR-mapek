@@ -2,8 +2,9 @@
 //
 // Layer 1: cheap deterministic gates that run inside the agent loop
 // with no extra Ollama round-trip (done-claim, loop detector, project
-// gates from .ur/verify.json). This is the lightweight "try the
-// implementation" pass and is always on (outside mode=off).
+// gates from .ur/verify.json or auto-detected project commands). This is
+// the lightweight "try the implementation" pass and is always on (outside
+// mode=off).
 // Layer 2: the heavy verification subagent. OPT-IN — by default the
 // verifier never auto-spawns it after a turn. Trigger the deep pass
 // yourself with the /verify command; set UR_VERIFIER_AUTO_SUBAGENT=1 to
@@ -29,10 +30,12 @@
 
 import type { ToolUseBlock } from '@urhq-ai/sdk/resources/index.mjs'
 import { isEnvTruthy } from '../../utils/envUtils.js'
+import { detectProjectQualityStack } from '../projectQuality.js'
 import { detectDoneClaim, evaluateDoneGate } from './doneDetector.js'
 import { ToolEffectLedger } from './ledger.js'
 import { LoopDetector, type LoopHit } from './loopDetector.js'
 import {
+  hasNonIgnoredEdits,
   loadVerifyConfig,
   pickCommands,
   runGateCommands,
@@ -73,6 +76,7 @@ function resolveMode(opt: VerifierMode | undefined): VerifierMode {
 }
 
 const DEFAULT_MAX_REJECTIONS_PER_TURN = 3
+const AUTO_DETECTED_GATE_TIMEOUT_MS = 600_000
 
 export class Verifier {
   readonly ledger = new ToolEffectLedger()
@@ -172,21 +176,26 @@ export class Verifier {
     // 3. Project gates (strict only; only when the turn actually mutated something)
     if (this.mode === 'strict') {
       const config = await this.configPromise
-      if (config) {
-        const modifiedFiles = this.ledger.modifiedFiles(turnId)
-        const ranBash = this.ledger.ranBash(turnId)
-        const commands = pickCommands(config, modifiedFiles, ranBash)
-        if (commands) {
-          const result = await runGateCommands(
-            commands,
-            this.cwd,
-            config.timeoutMs,
-          )
-          if (!result.ok) {
-            this.bumpRejection(turnId)
-            const failed = result as Extract<typeof result, { ok: false }>
-            return { ok: false, reminder: failed.reminder }
-          }
+      const modifiedFiles = this.ledger.modifiedFiles(turnId)
+      const ranBash = this.ledger.ranBash(turnId)
+      let commands = config
+        ? pickCommands(config, modifiedFiles, ranBash, this.cwd)
+        : null
+      let timeoutMs = config?.timeoutMs
+      if (!commands && hasNonIgnoredEdits(config, modifiedFiles, this.cwd)) {
+        commands = this.autoDetectedAfterEditCommands()
+        timeoutMs = config?.timeoutMs ?? AUTO_DETECTED_GATE_TIMEOUT_MS
+      }
+      if (commands && commands.length > 0) {
+        const result = await runGateCommands(
+          commands,
+          this.cwd,
+          timeoutMs,
+        )
+        if (!result.ok) {
+          this.bumpRejection(turnId)
+          const failed = result as Extract<typeof result, { ok: false }>
+          return { ok: false, reminder: failed.reminder }
         }
       }
     }
@@ -249,11 +258,18 @@ export class Verifier {
     const rejections = this.rejectionsByTurn.get(turnId) ?? 0
     return rejections >= this.maxRejections
   }
+
+  private autoDetectedAfterEditCommands(): string[] {
+    return detectProjectQualityStack(this.cwd).commands.map(
+      command => command.command,
+    )
+  }
 }
 
 export { ToolEffectLedger } from './ledger.js'
 export { LoopDetector } from './loopDetector.js'
 export {
+  hasNonIgnoredEdits,
   loadVerifyConfig,
   pickCommands,
   runGateCommands,

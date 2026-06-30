@@ -19,6 +19,11 @@ import { jsonStringify } from '../../utils/slowOperations.js'
 import { getErrorParts } from '../../utils/toolErrors.js'
 import { zodToJsonSchema } from '../../utils/zodToJsonSchema.js'
 import {
+  createIdeDiffBundle,
+  getIdeDiffBundle,
+  readIdeDiffPatch,
+} from './ideDiffs.js'
+import {
   getBackgroundTask,
   listBackgroundTasks,
   readBackgroundLog,
@@ -38,6 +43,7 @@ import type {
 } from './acpTypes.js'
 
 const MCP_COMMANDS: Command[] = []
+const acpTasks = new Map<string, AcpTaskRecord>()
 
 function jsonResponse(status: number, body: AcpResponse | { error: string }): Response {
   return new Response(JSON.stringify(body, null, 2), {
@@ -174,6 +180,41 @@ async function handleToolsCall(params: Record<string, unknown> | undefined, opti
   return { result: result.data }
 }
 
+async function handleIdeDiffCapture(
+  params: Record<string, unknown> | undefined,
+  options: AcpServeOptions,
+): Promise<unknown> {
+  const result = await createIdeDiffBundle(options.cwd, {
+    title: typeof params?.title === 'string' ? params.title : undefined,
+    baseRef: typeof params?.baseRef === 'string' ? params.baseRef : undefined,
+    staged: params?.staged === true,
+    diff: typeof params?.diff === 'string' ? params.diff : undefined,
+  })
+  if (result.error) {
+    throw new Error(result.error)
+  }
+  return {
+    bundle: result.bundle,
+    command: result.command,
+    empty: !result.bundle,
+  }
+}
+
+async function handleIdeSelect(
+  params: Record<string, unknown> | undefined,
+  options: AcpServeOptions,
+): Promise<unknown> {
+  const id = typeof params?.id === 'string' ? params.id : ''
+  if (!id) {
+    throw new Error('missing diff id')
+  }
+  const bundle = getIdeDiffBundle(options.cwd, id)
+  if (!bundle) {
+    throw new Error('IDE diff not found')
+  }
+  return { bundle, patch: readIdeDiffPatch(options.cwd, id) }
+}
+
 function headlessCommand(prompt: string): string[] {
   return [
     process.execPath,
@@ -216,10 +257,16 @@ async function runSynchronousTask(options: AcpServeOptions, prompt: string): Pro
   return record
 }
 
+function rememberTask(task: AcpTaskRecord): AcpTaskRecord {
+  acpTasks.set(task.id, task)
+  return task
+}
+
 function startAsynchronousTask(options: AcpServeOptions, prompt: string): AcpTaskRecord {
   const background = startBackgroundTask({
     cwd: options.cwd,
     task: `ACP delegated task: ${prompt}`,
+    dryRun: options.dryRun,
   })
   const createdAt = now()
   return {
@@ -230,6 +277,7 @@ function startAsynchronousTask(options: AcpServeOptions, prompt: string): AcpTas
     mode: 'async',
     createdAt,
     updatedAt: createdAt,
+    result: options.dryRun ? { dryRun: true, command: background.command } : undefined,
   }
 }
 
@@ -241,9 +289,9 @@ async function handleTasksSend(params: Record<string, unknown> | undefined, opti
   const mode = params?.mode === 'sync' ? 'sync' : 'async'
   if (mode === 'sync') {
     const task = await runSynchronousTask(options, prompt)
-    return { task }
+    return { task: rememberTask(task) }
   }
-  const task = startAsynchronousTask(options, prompt)
+  const task = rememberTask(startAsynchronousTask(options, prompt))
   return { task, statusUrl: `/acp/tasks/${encodeURIComponent(task.id)}` }
 }
 
@@ -268,12 +316,18 @@ function hydrateTask(cwd: string, record: AcpTaskRecord): AcpTaskRecord {
   }
 }
 
-function listTasks(): AcpTaskRecord[] {
-  return listBackgroundTasks(process.cwd())
+function listTasks(options: AcpServeOptions): AcpTaskRecord[] {
+  const knownBackgroundIds = new Set(
+    [...acpTasks.values()]
+      .map(task => task.backgroundTaskId)
+      .filter((id): id is string => typeof id === 'string'),
+  )
+  const persisted = listBackgroundTasks(options.cwd)
     .filter(bg => bg.task.startsWith('ACP delegated task:'))
+    .filter(bg => !knownBackgroundIds.has(bg.id))
     .map(bg => {
       const createdAt = bg.createdAt ?? now()
-      const record: AcpTaskRecord = {
+      return hydrateTask(options.cwd, {
         id: createAcpId(),
         prompt: bg.task.replace(/^ACP delegated task:\s*/u, ''),
         backgroundTaskId: bg.id,
@@ -281,14 +335,20 @@ function listTasks(): AcpTaskRecord[] {
         mode: 'async',
         createdAt,
         updatedAt: bg.updatedAt ?? createdAt,
-      }
-      return hydrateTask(process.cwd(), record)
+      })
     })
+  return [
+    ...[...acpTasks.values()].map(task => hydrateTask(options.cwd, task)),
+    ...persisted,
+  ].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 }
 
-async function handleTasksGet(params: Record<string, unknown> | undefined): Promise<unknown> {
+async function handleTasksGet(
+  params: Record<string, unknown> | undefined,
+  options: AcpServeOptions,
+): Promise<unknown> {
   const id = typeof params?.id === 'string' ? params.id : ''
-  const tasks = listTasks()
+  const tasks = listTasks(options)
   if (!id) {
     return { tasks }
   }
@@ -296,20 +356,27 @@ async function handleTasksGet(params: Record<string, unknown> | undefined): Prom
   if (!task) {
     throw new Error('task not found')
   }
-  const log = task.backgroundTaskId ? readBackgroundLog(process.cwd(), task.backgroundTaskId) : null
+  const log = task.backgroundTaskId
+    ? readBackgroundLog(options.cwd, task.backgroundTaskId)
+    : null
   return { task, log }
 }
 
-async function handleTasksCancel(params: Record<string, unknown> | undefined): Promise<unknown> {
+async function handleTasksCancel(
+  params: Record<string, unknown> | undefined,
+  options: AcpServeOptions,
+): Promise<unknown> {
   const id = typeof params?.id === 'string' ? params.id : ''
-  const task = listTasks().find(t => t.id === id)
+  const task = listTasks(options).find(t => t.id === id)
   if (!task) {
     throw new Error('task not found')
   }
   if (task.backgroundTaskId) {
-    stopBackgroundTask(process.cwd(), task.backgroundTaskId)
+    stopBackgroundTask(options.cwd, task.backgroundTaskId)
   }
-  return { task: { ...task, status: 'canceled' as const } }
+  const canceled = { ...task, status: 'canceled' as const, updatedAt: now() }
+  acpTasks.set(canceled.id, canceled)
+  return { task: canceled }
 }
 
 async function dispatchMethod(
@@ -327,9 +394,13 @@ async function dispatchMethod(
     case 'tasks/send':
       return handleTasksSend(params, options)
     case 'tasks/get':
-      return handleTasksGet(params)
+      return handleTasksGet(params, options)
     case 'tasks/cancel':
-      return handleTasksCancel(params)
+      return handleTasksCancel(params, options)
+    case 'ide/diffCapture':
+      return handleIdeDiffCapture(params, options)
+    case 'ide/select':
+      return handleIdeSelect(params, options)
     case 'shutdown':
       return {}
     default:
@@ -388,6 +459,7 @@ export async function stopAcpServer(): Promise<void> {
     acpServer.stop()
     acpServer = null
   }
+  acpTasks.clear()
 }
 
 export async function serveAcp(options: AcpServeOptions): Promise<void> {
@@ -399,6 +471,7 @@ export async function serveAcp(options: AcpServeOptions): Promise<void> {
   }
 
   await stopAcpServer()
+  acpTasks.clear()
 
   acpServer = Bun.serve({
     hostname: options.host,

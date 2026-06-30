@@ -28,6 +28,42 @@ export {
   whereDefined,
 } from './graph.js'
 export type { CodeGraph, GraphHit, SourceFile } from './graph.js'
+export {
+  buildRepoIndex,
+  callIndexPath,
+  configIndexPath,
+  docIndexPath,
+  docSearch,
+  findCallers,
+  findTestsForFile,
+  formatRepoStats,
+  loadCallIndex,
+  loadConfigIndex,
+  loadDocIndex,
+  loadRepoIndex,
+  loadSymbolIndex,
+  loadTestIndex,
+  repoIndexDir,
+  repoIndexPath,
+  repoSearch,
+  symbolIndexPath,
+  symbolSearch,
+  testIndexPath,
+} from './repoIndex.js'
+export type {
+  CallEntry,
+  CallGraphIndex,
+  ConfigEntry,
+  ConfigIndex,
+  DocEntry,
+  DocIndex,
+  RepoFileEntry,
+  RepoIndex,
+  SymbolEntry,
+  SymbolIndex,
+  TestEntry,
+  TestIndex,
+} from './repoIndex.js'
 export type {
   CodeChunk,
   CodeIndex,

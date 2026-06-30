@@ -178,8 +178,9 @@ ur context-pack compress
 Generated files:
 
 - `.ur/project-manifest.json` — architecture manifest from Project DNA,
-  `package.json`, instruction files, `.ur/verify.json`, `.ur/safety-policy.json`,
-  and other manifests.
+  package scripts, instruction files, Cursor-style rules, `.ur/verify.json`,
+  `.ur/safety-policy.json`, MCP config, editor settings, workflow files, and
+  other manifests.
 - `.ur/context/architecture.md` — human-readable architecture summary.
 - `.ur/context/task-memory.jsonl` — decisions, constraints, commands, diffs,
   and notes.

@@ -116,7 +116,7 @@ describe('discoverOllamaHosts', () => {
 
   test('returns empty when no interfaces', async () => {
     const original = getLocalSubnetInterfaces
-    const hosts = await discoverOllamaHosts()
+    const hosts = await discoverOllamaHosts({ interfaces: [] })
     expect(hosts.length).toBeGreaterThanOrEqual(0)
     expect(original).toBeDefined()
   })

@@ -16,7 +16,7 @@
 
 import { spawn } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { isAbsolute, join, relative } from 'node:path'
 import picomatch from 'picomatch'
 
 export type VerifyConfig = {
@@ -89,9 +89,14 @@ export function pickCommands(
   config: VerifyConfig,
   modifiedFiles: string[],
   ranBash: boolean,
+  cwd?: string,
 ): string[] | null {
-  const filteredEdits = filterIgnored(modifiedFiles, config.ignorePatterns)
-  if (filteredEdits.length > 0 && config.afterEdit && config.afterEdit.length > 0) {
+  const filteredEdits = filterIgnored(modifiedFiles, config.ignorePatterns, cwd)
+  if (
+    filteredEdits.length > 0 &&
+    config.afterEdit &&
+    config.afterEdit.length > 0
+  ) {
     return config.afterEdit
   }
   if (
@@ -105,13 +110,36 @@ export function pickCommands(
   return null
 }
 
+export function hasNonIgnoredEdits(
+  config: Pick<VerifyConfig, 'ignorePatterns'> | null | undefined,
+  modifiedFiles: string[],
+  cwd?: string,
+): boolean {
+  return filterIgnored(modifiedFiles, config?.ignorePatterns, cwd).length > 0
+}
+
 function filterIgnored(
   files: string[],
   ignorePatterns: string[] | undefined,
+  cwd?: string,
 ): string[] {
   if (!ignorePatterns || ignorePatterns.length === 0) return files
   const matcher = picomatch(ignorePatterns)
-  return files.filter(f => !matcher(f))
+  return files.filter(file => {
+    const candidates = pathCandidates(file, cwd)
+    return !candidates.some(candidate => matcher(candidate))
+  })
+}
+
+function pathCandidates(file: string, cwd?: string): string[] {
+  const out = new Set<string>([file])
+  if (cwd && isAbsolute(file)) {
+    out.add(relative(cwd, file))
+  }
+  if (file.startsWith('/')) {
+    out.add(file.replace(/^\/+/, ''))
+  }
+  return [...out]
 }
 
 /**

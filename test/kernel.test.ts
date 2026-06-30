@@ -5,10 +5,21 @@ import { join } from 'node:path'
 import { createAgentKernel, runKernelStage, type KernelStage } from '../src/services/agents/kernel.js'
 import { planSpecRun, planSpecVerify, runSpecWithKernel, runSpecVerifyWithKernel } from '../src/services/agents/kernelSpec.js'
 import type { HeadlessRunner } from '../src/services/agents/headlessAgent.js'
-import { createSpec } from '../src/services/agents/spec.js'
+import { createSpec, parseTasks, readPhase } from '../src/services/agents/spec.js'
 
 function tempDir(prefix: string): string {
   return mkdtempSync(join(tmpdir(), prefix))
+}
+
+function allProofsOutput(): string {
+  return [
+    'Compile proof: command `bun run typecheck` exited 0.',
+    'Test proof: command `bun test` exited 0.',
+    'Lint proof: command `bun run lint` exited 0.',
+    'Diff proof: command `git diff --stat` reviewed expected files.',
+    'Runtime proof: command `node ./bin/ur.js --version` exited 0.',
+    'VERDICT: PASS',
+  ].join('\n')
 }
 
 describe('AgentKernel', () => {
@@ -54,6 +65,29 @@ describe('AgentKernel', () => {
     expect(result.verdict).toBe('FAIL')
     expect(result.isError).toBe(true)
     expect(result.output).toContain('Project verify gate FAILED')
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  test('verifier stage rejects PASS without all required proofs', async () => {
+    const dir = tempDir('ur-kernel-proof-')
+    createSpec(dir, 'feat', 'do a thing')
+    const runner: HeadlessRunner = async () => ({ output: 'VERDICT: PASS', verdict: 'PASS', isError: false })
+    const kernel = createAgentKernel({ cwd: dir, runner })
+    const result = await runKernelStage(kernel, planSpecVerify(dir, 'feat'), { cwd: dir, runner })
+    expect(result.verdict).toBe('FAIL')
+    expect(result.isError).toBe(true)
+    expect(result.output).toContain('PASS was claimed without required proof')
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  test('verifier stage accepts PASS with compile, test, lint, diff, and runtime proofs', async () => {
+    const dir = tempDir('ur-kernel-proof-pass-')
+    createSpec(dir, 'feat', 'do a thing')
+    const runner: HeadlessRunner = async () => ({ output: allProofsOutput(), verdict: 'PASS', isError: false })
+    const kernel = createAgentKernel({ cwd: dir, runner })
+    const result = await runKernelStage(kernel, planSpecVerify(dir, 'feat'), { cwd: dir, runner })
+    expect(result.verdict).toBe('PASS')
+    expect(result.isError).toBe(false)
     rmSync(dir, { recursive: true, force: true })
   })
 
@@ -148,6 +182,19 @@ describe('kernelSpec adapters', () => {
     const result = await runSpecWithKernel(dir, 'feat', kernel, { all: true, runner })
     expect(result.ran.length).toBeGreaterThan(0)
     expect(result.stoppedOnFailure).toBe(false)
+    expect(parseTasks(readPhase(dir, 'feat', 'tasks') ?? '').every(task => task.done)).toBe(true)
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  test('runSpecWithKernel does not mark PARTIAL tasks done', async () => {
+    const dir = tempDir('ur-kernel-spec-partial-')
+    createSpec(dir, 'feat', '1. build core 2. add tests')
+    const runner: HeadlessRunner = async () => ({ output: 'not enough evidence\nVERDICT: PARTIAL', verdict: 'PARTIAL', isError: false })
+    const kernel = createAgentKernel({ cwd: dir, runner })
+    const result = await runSpecWithKernel(dir, 'feat', kernel, { all: true, runner })
+    expect(result.stoppedOnFailure).toBe(true)
+    expect(result.ran[0].status).toBe('failed')
+    expect(parseTasks(readPhase(dir, 'feat', 'tasks') ?? '').every(task => !task.done)).toBe(true)
     rmSync(dir, { recursive: true, force: true })
   })
 

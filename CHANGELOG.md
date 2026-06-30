@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.22.3
+
+### Added
+- **Executable skill directories.** A `.ur/skills/<name>/` directory containing
+  `skill.yaml` is now an executable skill that compiles into a `WorkflowSpec`.
+  Supports `instructions.md`, `scripts/`, `templates/`, and `checklists/`.
+  `src/skills/skillSpec.ts` parses, validates, and compiles skills; step prompts
+  support `$ARGUMENTS`, `$0..$N`, and `$ARGUMENTS[N]` substitution.
+- **`ur skill` CLI.** New command surface: `ur skill list`, `ur skill show <name>`,
+  `ur skill run <name> [args]`, and `ur skill init <name>`. Registered in
+  `src/commands.ts` and `src/main.tsx`.
+- **Semantic repo index.** `src/utils/codeIndex/repoIndex.ts` builds offline,
+  dependency-free indexes under `.ur/code-index/`: `repo.json` (file
+  classification + imports/importedBy), `symbols.json`, `calls.json`,
+  `tests.json`, `docs.json`, and `configs.json`. `ur code-index repo` exposes
+  `build|status|search|symbols|callers|tests|docs|configs` subcommands.
+- **`--repo` flag for code-index build/watch.** `ur code-index build --repo`
+  builds both the embedding index and the repo index; `watch --repo` refreshes
+  the repo index on file changes.
+
+### Changed
+- Reused the existing workflow engine for executable skills and extended the
+  existing `ur code-index` surface for the repo index, keeping changes additive.
+
+### Verified
+- Added `test/skillSpec.test.ts`, `test/skillCommand.test.ts`, and
+  `test/repoIndex.test.ts` covering skill parsing, compilation, CLI scaffolding,
+  repo file classification, symbol/call/test/doc/config extraction, and index
+  round-trips.
+
 ## 1.22.2
 
 ### Added

@@ -25,6 +25,7 @@ import type { AgentKernel } from './kernel.js'
 import type { SpecMeta, SpecTask } from './spec.js'
 import { loadVerifyConfig, runGateCommands } from '../verifier/projectGates.js'
 import type { Verdict } from './executor.js'
+import { enforceNoPassWithoutProof } from './verificationProofs.js'
 
 export type SpecVerifyRecord = {
   version: 1
@@ -318,8 +319,10 @@ export async function runSpecVerification(
     skipPermissions: options.skipPermissions,
   })
 
-  const verdict = extractVerdict(out.output) ?? 'PARTIAL'
-  const commandFailures = countCommandFailures(out.output)
+  const initialVerdict = extractVerdict(out.output) ?? 'PARTIAL'
+  const strict = enforceNoPassWithoutProof(initialVerdict, out.output)
+  const verdict = strict.verdict
+  const commandFailures = countCommandFailures(strict.output) + (strict.proofFailure ? 1 : 0)
   const generatedAt = new Date().toISOString()
 
   const summary =
@@ -334,7 +337,7 @@ export async function runSpecVerification(
     summary,
     commandFailures,
     gateResults: gateRun.results,
-    subagentOutput: out.output,
+    subagentOutput: strict.output,
     generatedAt,
   }
 

@@ -4496,6 +4496,15 @@ async function run(): Promise<CommanderCommand> {
     const args = [action, name, stepId, opts.ascii ? '--ascii' : undefined, opts.force ? '--force' : undefined, opts.dryRun ? '--dry-run' : undefined, opts.resume ? '--resume' : undefined, opts.maxTurns ? `--max-turns ${opts.maxTurns}` : undefined, opts.concurrency ? `--concurrency ${opts.concurrency}` : undefined, opts.live ? '--live' : undefined, opts.skipPermissions ? '--skip-permissions' : undefined, opts.json ? '--json' : undefined].filter(Boolean).join(' ');
     await runLocalTextCommand(() => import('./commands/workflow/workflow.js'), args);
   });
+  program.command('skill [action] [name] [args...]').alias('skills').description('Executable skill workflows: list, show, run, init').option('--dry-run', 'Preview run without calling any model').option('--max-turns <n>', 'Max agentic turns per step when running').option('--skip-permissions', 'Pass --dangerously-skip-permissions to each step (sandboxes only)').option('--json', 'Output as JSON').action(async (action: string | undefined, name: string | undefined, args: string[] = [], opts: {
+    dryRun?: boolean;
+    maxTurns?: string;
+    skipPermissions?: boolean;
+    json?: boolean;
+  }) => {
+    const cmdArgs = [action, name, ...args, opts.dryRun ? '--dry-run' : undefined, opts.maxTurns ? `--max-turns ${opts.maxTurns}` : undefined, opts.skipPermissions ? '--skip-permissions' : undefined, opts.json ? '--json' : undefined].filter(Boolean).join(' ');
+    await runLocalTextCommand(() => import('./commands/skill/skill.js'), cmdArgs);
+  });
   program.command('agent-inspect').alias('inspect-agents').description('Reconstruct a per-subagent timeline from a session transcript').option('--file <path>', 'Transcript JSONL or JSON file').option('--json', 'Output as JSON').action(async (opts: {
     file?: string;
     json?: boolean;
@@ -4681,12 +4690,13 @@ async function run(): Promise<CommanderCommand> {
     const args = [action, name, opts.file ? `--file ${quoteLocalCommandArg(opts.file)}` : undefined, opts.name ? `--name ${quoteLocalCommandArg(opts.name)}` : undefined, opts.limit ? `--limit ${opts.limit}` : undefined, opts.dryRun ? '--dry-run' : undefined, opts.category ? `--category ${quoteLocalCommandArg(opts.category)}` : undefined, opts.maxTurns ? `--max-turns ${opts.maxTurns}` : undefined, opts.skipPermissions ? '--skip-permissions' : undefined, opts.force ? '--force' : undefined, opts.json ? '--json' : undefined].filter(Boolean).join(' ');
     await runLocalTextCommand(() => import('./commands/eval/eval.js'), args);
   });
-  program.command('code-index [action] [query...]').alias('codeindex').description('Build and query a local semantic code index (embeddings via the local Ollama app)').option('--graph', 'Also build or watch the structural code graph').option('--dry-run', 'Preview watch mode without starting a watcher').option('--json', 'Output as JSON').action(async (action: string | undefined, query: string[] = [], opts: {
+  program.command('code-index [action] [query...]').alias('codeindex').description('Build and query a local semantic code index (embeddings via the local Ollama app)').option('--graph', 'Also build or watch the structural code graph').option('--repo', 'Also build or watch the semantic repo index').option('--dry-run', 'Preview watch mode without starting a watcher').option('--json', 'Output as JSON').action(async (action: string | undefined, query: string[] = [], opts: {
     graph?: boolean;
+    repo?: boolean;
     dryRun?: boolean;
     json?: boolean;
   }) => {
-    const args = [action, ...query, opts.graph ? '--graph' : undefined, opts.dryRun ? '--dry-run' : undefined, opts.json ? '--json' : undefined].filter(Boolean).join(' ');
+    const args = [action, ...query, opts.graph ? '--graph' : undefined, opts.repo ? '--repo' : undefined, opts.dryRun ? '--dry-run' : undefined, opts.json ? '--json' : undefined].filter(Boolean).join(' ');
     await runLocalTextCommand(() => import('./commands/code-index/code-index.js'), args);
   });
   program.command('repo-edit [action] [rest...]').alias('repoedit').alias('reliable-edit').description('Reliable repo editing: indexed search, AST-aware rename plans, patch previews, and rollback-safe apply').option('--to <identifier>', 'New identifier for rename operations').option('--check <cmd>', 'Validation command to run after apply; failures rollback touched files').option('--json', 'Output as JSON').action(async (action: string | undefined, rest: string[] = [], opts: {

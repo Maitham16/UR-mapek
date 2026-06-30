@@ -70,3 +70,14 @@ test('runSpec stops on the first failing task', async () => {
   expect(loadSpec(tmp, 'feat')?.name).toBe('feat')
   rmSync(tmp, { recursive: true, force: true })
 })
+
+test('runSpec does not mark PARTIAL as completed', async () => {
+  const tmp = mkdtempSync(join(tmpdir(), 'ur-spec-'))
+  createSpec(tmp, 'feat', '1. step one 2. step two')
+  const runner: HeadlessRunner = async () => ({ output: 'not enough evidence', verdict: 'PARTIAL', isError: false })
+  const result = await runSpec(tmp, 'feat', { cwd: tmp, all: true, runner })
+  expect(result.stoppedOnFailure).toBe(true)
+  expect(result.ran[0].status).toBe('failed')
+  expect(parseTasks(readPhase(tmp, 'feat', 'tasks') ?? '').every(t => !t.done)).toBe(true)
+  rmSync(tmp, { recursive: true, force: true })
+})

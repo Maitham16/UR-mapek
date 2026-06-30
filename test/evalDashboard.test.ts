@@ -49,6 +49,7 @@ function makeReport(): EvalReport {
           insertions: 10,
           deletions: 1,
           testPassed: true,
+          testCommand: 'bun test test/parser.test.ts',
           commandFailures: 0,
           humanEditsNeeded: 0,
         },
@@ -71,6 +72,7 @@ function makeReport(): EvalReport {
           insertions: 0,
           deletions: 0,
           testPassed: false,
+          testCommand: 'bun test test/parser.test.ts',
           commandFailures: 1,
           humanEditsNeeded: 0,
         },
@@ -89,11 +91,15 @@ describe('eval dashboard', () => {
     expect(html).toContain('Command failures')
     expect(html).toContain('Human edits')
     expect(html).toContain('Task timeline')
-    expect(html).toContain('model')
-    expect(html).toContain('cmd fail')
+    expect(html).toContain('model used')
+    expect(html).toContain('commands run')
+    expect(html).toContain('diffs produced')
+    expect(html).toContain('tests passed/failed')
+    expect(html).toContain('command failures')
     expect(html).toContain('fix-1')
     expect(html).toContain('claude-sonnet-4')
     expect(html).toContain('gpt-4o')
+    expect(html).toContain('bun test test/parser.test.ts')
   })
 
   test('dashboard escapes HTML in output previews and ids', () => {

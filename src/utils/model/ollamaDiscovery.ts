@@ -28,6 +28,8 @@ export type DiscoveryOptions = {
   connect?: ConnectFn
   /** Override the scanned subnets. Each entry is [address, prefixLength]. */
   subnets?: Array<[string, number]>
+  /** Override local interface discovery for deterministic tests. */
+  interfaces?: LocalInterface[]
 }
 
 /**
@@ -216,6 +218,7 @@ export async function discoverOllamaHosts(
     signal,
     connect = defaultConnect,
     subnets,
+    interfaces: interfaceOverride,
   } = options
   if (signal?.aborted) return []
 
@@ -227,7 +230,7 @@ export async function discoverOllamaHosts(
       }
     }
   } else {
-    const interfaces = getLocalSubnetInterfaces()
+    const interfaces = interfaceOverride ?? getLocalSubnetInterfaces()
     if (interfaces.length === 0) return []
     for (const iface of interfaces) {
       for (const host of listSubnetHosts(iface.address, iface.prefixLength)) {

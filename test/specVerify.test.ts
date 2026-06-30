@@ -11,6 +11,18 @@ import {
   saveVerificationRecord,
   type SpecVerifyRecord,
 } from '../src/services/agents/specVerifier.ts'
+import { evaluateVerificationProofs } from '../src/services/agents/verificationProofs.ts'
+
+function allProofsOutput(): string {
+  return [
+    'Compile proof: command `bun run typecheck` exited 0; output: ok.',
+    'Test proof: command `bun test` exited 0; output: all tests passed.',
+    'Lint proof: command `bun run lint` exited 0; output: lint passed.',
+    'Diff proof: command `git diff --stat` showed only expected files.',
+    'Runtime proof: command `node ./bin/ur.js --version` exited 0.',
+    'VERDICT: PASS',
+  ].join('\n')
+}
 
 function tempDir(prefix: string): string {
   return mkdtempSync(join(tmpdir(), prefix))
@@ -21,7 +33,7 @@ describe('spec verifier', () => {
     const dir = tempDir('ur-spec-verify-')
     createSpec(dir, 'auth-refactor', 'refactor login without changing behavior')
     const runner: HeadlessRunner = async () => ({
-      output: 'VERDICT: PASS\nall proofs satisfied',
+      output: allProofsOutput(),
       verdict: 'PASS',
       isError: false,
     })
@@ -79,6 +91,44 @@ describe('spec verifier', () => {
     expect(prompt).toContain('REQUIRED PROOFS')
   })
 
+  test('PASS without required proofs is downgraded to FAIL', async () => {
+    const dir = tempDir('ur-spec-proof-')
+    createSpec(dir, 'feat', 'do a thing')
+    const runner: HeadlessRunner = async () => ({
+      output: 'looks good\nVERDICT: PASS',
+      verdict: 'PASS',
+      isError: false,
+    })
+    const result = await runSpecVerification(dir, 'feat', { runner })
+    expect(result.verdict).toBe('FAIL')
+    expect(result.commandFailures).toBe(1)
+    expect(result.subagentOutput).toContain('PASS was claimed without required proof')
+    expect(loadVerificationRecord(dir, 'feat')?.verdict).toBe('FAIL')
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  test('proof evaluator requires compile, test, lint, diff, and runtime evidence', () => {
+    const missing = evaluateVerificationProofs('Compile proof: command `tsc` exited 0.')
+    expect(missing.ok).toBe(false)
+    expect(missing.present).toEqual(['compile'])
+    expect(missing.missing).toEqual(['test', 'lint', 'diff', 'runtime'])
+
+    const labelsOnly = evaluateVerificationProofs([
+      'Compile proof',
+      'Test proof',
+      'Lint proof',
+      'Diff proof',
+      'Runtime proof',
+      'VERDICT: PASS',
+    ].join('\n'))
+    expect(labelsOnly.ok).toBe(false)
+    expect(labelsOnly.present).toEqual([])
+
+    const complete = evaluateVerificationProofs(allProofsOutput())
+    expect(complete.ok).toBe(true)
+    expect(complete.missing).toEqual([])
+  })
+
   test('fails fast when deterministic gates fail', async () => {
     const dir = tempDir('ur-spec-gate-')
     createSpec(dir, 'feat', 'do a thing')
@@ -87,7 +137,7 @@ describe('spec verifier', () => {
       JSON.stringify({ afterEdit: ['exit 1'] }),
     )
     const runner: HeadlessRunner = async () => ({
-      output: 'VERDICT: PASS',
+      output: allProofsOutput(),
       verdict: 'PASS',
       isError: false,
     })

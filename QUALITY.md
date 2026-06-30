@@ -10,6 +10,7 @@ Run these commands before tagging or pushing a release:
 
 ```sh
 bun run typecheck
+bun run lint
 bun test
 bun run bundle
 bun run smoke

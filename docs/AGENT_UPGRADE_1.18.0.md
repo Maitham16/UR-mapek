@@ -34,10 +34,12 @@ ur tf-loop detect
 
 ```sh
 bun run typecheck
+bun run lint
 bun test test/testFirstLoop.test.ts
 node ./bin/ur.js test-first --help
 node ./bin/ur.js test-first detect
 ```
 
-If a project has no lint script, `test-first` reports lint as a missing phase
-instead of inventing a command.
+If an external project has no lint script, `test-first` reports lint as a
+missing phase instead of inventing a command. UR itself now exposes
+`bun run lint`, so local quality detection includes compile, test, and lint.

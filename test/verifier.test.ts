@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { detectDoneClaim, evaluateDoneGate } from '../src/services/verifier/doneDetector'
@@ -16,6 +16,22 @@ const TURN = '00000000-0000-0000-0000-000000000001'
 
 function fakeToolUse(name: string, input: any, id = 'tu_1') {
   return { type: 'tool_use', id, name, input } as any
+}
+
+async function writeAutoGateProject(
+  cwd: string,
+  scripts: Record<string, string>,
+): Promise<void> {
+  await writeFile(join(cwd, 'package.json'), JSON.stringify({ scripts }))
+  await writeFile(join(cwd, 'bun.lock'), '')
+}
+
+function appendGateScript(label: string): string {
+  return `node -e "require('node:fs').appendFileSync('gate.log', '${label}\\n')"`
+}
+
+function failGateScript(message: string): string {
+  return `node -e "process.stderr.write('${message}'); process.exit(7)"`
 }
 
 describe('ToolEffectLedger', () => {
@@ -310,6 +326,109 @@ describe('Verifier integration', () => {
         true,
       )
       const r = await v.checkTurn(TURN, 'I created the file.', true)
+      expect(r.ok).toBe(true)
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  test('auto-detects and runs compile, test, and lint after edits without installed gates', async () => {
+    const cwd = await mkdtemp(join(tmpdir(), 'ur-verifier-'))
+    try {
+      await writeAutoGateProject(cwd, {
+        typecheck: appendGateScript('typecheck'),
+        test: appendGateScript('test'),
+        lint: appendGateScript('lint'),
+      })
+      const v = new Verifier({ cwd })
+      v.beginTurn(TURN)
+      v.recordToolCall(
+        TURN,
+        fakeToolUse('Write', { file_path: join(cwd, 'src', 'a.ts') }),
+        true,
+      )
+      const r = await v.checkTurn(TURN, 'I edited the file.', true)
+      expect(r.ok).toBe(true)
+      expect(await readFile(join(cwd, 'gate.log'), 'utf8')).toBe(
+        'typecheck\ntest\nlint\n',
+      )
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  test('auto-detected gates reject completion when a detected command fails', async () => {
+    const cwd = await mkdtemp(join(tmpdir(), 'ur-verifier-'))
+    try {
+      await writeAutoGateProject(cwd, {
+        typecheck: failGateScript('auto gate failed'),
+        test: appendGateScript('test'),
+        lint: appendGateScript('lint'),
+      })
+      const v = new Verifier({ cwd })
+      v.beginTurn(TURN)
+      v.recordToolCall(
+        TURN,
+        fakeToolUse('Write', { file_path: join(cwd, 'src', 'a.ts') }),
+        true,
+      )
+      const r = await v.checkTurn(TURN, 'I edited the file.', true)
+      expect(r.ok).toBe(false)
+      if (!r.ok) {
+        expect(r.reminder).toContain('bun run typecheck')
+        expect(r.reminder).toContain('auto gate failed')
+      }
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  test('configured edit gates take precedence over auto-detected gates', async () => {
+    const cwd = await mkdtemp(join(tmpdir(), 'ur-verifier-'))
+    try {
+      await writeAutoGateProject(cwd, {
+        typecheck: failGateScript('should not run'),
+        test: failGateScript('should not run'),
+        lint: failGateScript('should not run'),
+      })
+      await mkdir(join(cwd, '.ur'), { recursive: true })
+      await writeFile(
+        join(cwd, '.ur', 'verify.json'),
+        JSON.stringify({ afterEdit: ['true'] }),
+      )
+      const v = new Verifier({ cwd })
+      v.beginTurn(TURN)
+      v.recordToolCall(
+        TURN,
+        fakeToolUse('Write', { file_path: join(cwd, 'src', 'a.ts') }),
+        true,
+      )
+      const r = await v.checkTurn(TURN, 'I edited the file.', true)
+      expect(r.ok).toBe(true)
+    } finally {
+      await rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  test('ignorePatterns also suppress auto-detected gates for absolute edit paths', async () => {
+    const cwd = await mkdtemp(join(tmpdir(), 'ur-verifier-'))
+    try {
+      await writeAutoGateProject(cwd, {
+        typecheck: failGateScript('ignored file should not run gates'),
+      })
+      await mkdir(join(cwd, '.ur'), { recursive: true })
+      await writeFile(
+        join(cwd, '.ur', 'verify.json'),
+        JSON.stringify({ ignorePatterns: ['docs/**'] }),
+      )
+      const v = new Verifier({ cwd })
+      v.beginTurn(TURN)
+      v.recordToolCall(
+        TURN,
+        fakeToolUse('Write', { file_path: join(cwd, 'docs', 'notes.md') }),
+        true,
+      )
+      const r = await v.checkTurn(TURN, 'I edited the docs.', true)
       expect(r.ok).toBe(true)
     } finally {
       await rm(cwd, { recursive: true, force: true })

@@ -184,7 +184,9 @@ function hasAnyExpectation(expect: EvalExpectation): boolean {
       expect.notContains?.length ||
       expect.regex?.length ||
       expect.verdict ||
-      typeof expect.maxOutputChars === 'number',
+      typeof expect.maxOutputChars === 'number' ||
+      Boolean(expect.judge?.trim()) ||
+      Boolean(expect.testCommand?.trim()),
   )
 }
 
@@ -407,16 +409,38 @@ export async function runSuite(
         detail: 'case needs a judge but none was provided (run without --dry-run)',
       })
     }
+    if (expect.testCommand) {
+      if (metrics?.testPassed !== undefined) {
+        checks.push({
+          name: `test command: ${expect.testCommand}`,
+          passed: metrics.testPassed,
+          detail: metrics.testPassed ? undefined : 'test command failed',
+        })
+      } else {
+        checks.push({
+          name: `test command: ${expect.testCommand}`,
+          passed: false,
+          detail: 'runner did not execute the test command',
+        })
+      }
+    }
     const passed = !isError && checks.every(check => check.passed)
+    const measuredDurationMs = Date.now() - started
+    const normalizedMetrics = metrics
+      ? {
+          ...metrics,
+          durationMs: metrics.durationMs > 0 ? metrics.durationMs : measuredDurationMs,
+        }
+      : undefined
     results.push({
       id: evalCase.id,
       category: evalCase.category,
       passed,
       isError,
-      durationMs: Date.now() - started,
+      durationMs: measuredDurationMs,
       checks,
       outputPreview: preview(output),
-      metrics,
+      metrics: normalizedMetrics,
     })
   }
   return buildReport(suite.name, results)
@@ -616,6 +640,7 @@ function firstModelName(modelUsage: { [modelName: string]: { inputTokens: number
 /** Production runner: each case spawns a headless `ur -p` and is graded. */
 export function makeCliEvalRunner(options: CliEvalRunnerOptions): EvalRunner {
   return async (evalCase: EvalCase) => {
+    const started = Date.now()
     resetCostState()
     const file = process.execPath
     const baseArgs = [process.argv[1] ?? '']
@@ -655,7 +680,7 @@ export function makeCliEvalRunner(options: CliEvalRunnerOptions): EvalRunner {
 
     const modelUsage = getModelUsage()
     const metrics: EvalRunMetrics = {
-      durationMs: 0,
+      durationMs: Date.now() - started,
       costUSD: childMetrics?.costUSD ?? getTotalCostUSD(),
       inputTokens: childMetrics?.inputTokens ?? getTotalInputTokens(),
       outputTokens: childMetrics?.outputTokens ?? getTotalOutputTokens(),
@@ -667,7 +692,10 @@ export function makeCliEvalRunner(options: CliEvalRunnerOptions): EvalRunner {
       testCommand: testResult?.testCommand,
       testStdout: testResult?.testStdout,
       testStderr: testResult?.testStderr,
-      commandFailures: countCommandFailures(output),
+      commandFailures:
+        countCommandFailures(output) +
+        (result.code !== 0 ? 1 : 0) +
+        (testResult && !testResult.testPassed ? 1 : 0),
       humanEditsNeeded: countHumanEdits(output),
     }
 
@@ -753,6 +781,7 @@ export function buildDashboardHtml(
         : m?.testPassed === false
           ? '<span class="badge bad">test fail</span>'
           : ''
+    const commandsRun = [m?.testCommand].filter(Boolean).join(', ')
     return (
       `<tr class="${c.passed ? 'ok' : 'bad'}">` +
       `<td>${c.passed ? '✓' : '✗'}</td>` +
@@ -764,6 +793,7 @@ export function buildDashboardHtml(
       `<td>${num(m?.inputTokens)} / ${num(m?.outputTokens)}</td>` +
       `<td>${num(m?.filesChanged)} <span class="muted">+${num(m?.insertions)} −${num(m?.deletions)}</span></td>` +
       `<td>${testBadge}</td>` +
+      `<td><code>${escapeHtml(commandsRun || '—')}</code></td>` +
       `<td>${num(m?.commandFailures)}</td>` +
       `<td>${m?.humanEditsNeeded ? `<span class="badge warn">${m.humanEditsNeeded}</span>` : '—'}</td>` +
       `<td><code>${escapeHtml(c.outputPreview.slice(0, 60))}</code></td>` +
@@ -786,7 +816,7 @@ export function buildDashboardHtml(
       `${summaryCards(report)}` +
       `<table class="cats"><thead><tr><th>category</th><th>pass</th></tr></thead><tbody>${cats}</tbody></table>` +
       `<h3>Task timeline</h3>` +
-      `<table class="cases timeline"><thead><tr><th></th><th>case</th><th>category</th><th>model</th><th>time</th><th>cost</th><th>tokens</th><th>files</th><th>test</th><th>cmd fail</th><th>human</th><th>output</th></tr></thead>` +
+      `<table class="cases timeline"><thead><tr><th></th><th>case</th><th>category</th><th>model used</th><th>time</th><th>cost</th><th>tokens</th><th>diffs produced</th><th>tests passed/failed</th><th>commands run</th><th>command failures</th><th>human edits</th><th>output</th></tr></thead>` +
       `<tbody>${rows}</tbody></table></section>`
     )
   }
@@ -1261,9 +1291,11 @@ Commands:
 - \`ur eval list\` — list suites
 - \`ur eval validate <suite>\` — validate a suite file
 - \`ur eval run <suite>\` — run every case through a headless \`ur -p\` and grade it
+- \`ur eval run <suite> --metrics\` — persist cost, tokens, model, time, diffs, test results, command failures, and human-edit heuristics
 - \`ur eval run <suite> --dry-run\` — exercise the suite offline (no model calls)
 - \`ur eval run <suite> --category coding\` — run only one category
 - \`ur eval report <suite>\` — re-print the last run's report
+- \`ur eval dashboard\` — render the local task timeline with commands, diffs, tests, model, tokens, time, and cost
 - \`ur eval bench list\` — show supported benchmark adapters
 - \`ur eval bench swe-bench --file local.jsonl --name local-swe\` — import a local benchmark export as a UR suite
 

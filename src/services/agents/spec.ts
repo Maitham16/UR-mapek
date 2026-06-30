@@ -282,7 +282,7 @@ export async function runSpec(
       maxTurns: options.maxTurns,
       skipPermissions: options.skipPermissions,
     })
-    const ok = !out.isError && out.verdict !== 'FAIL'
+    const ok = !out.isError && out.verdict === 'PASS'
     options.onEvent?.({ id: next.id, title: next.title, verdict: out.verdict ?? null, isError: !!out.isError })
     ran.push({ id: next.id, title: next.title, status: ok ? 'done' : 'failed' })
 

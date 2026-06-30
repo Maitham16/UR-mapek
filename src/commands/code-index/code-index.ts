@@ -2,16 +2,30 @@ import type { LocalCommandCall } from '../../types/command.js'
 import {
   buildCodeGraph,
   buildOrUpdateIndex,
+  buildRepoIndex,
   dependenciesOf,
+  docSearch,
+  findCallers,
+  findTestsForFile,
   formatGraphStats,
+  formatRepoStats,
   getEmbeddingModel,
   graphPath,
   graphSearch,
   impactOf,
   indexPath,
+  loadCallIndex,
+  loadConfigIndex,
+  loadDocIndex,
   loadGraph,
   loadIndex,
+  loadRepoIndex,
+  loadSymbolIndex,
+  loadTestIndex,
+  repoIndexPath,
+  repoSearch,
   searchCode,
+  symbolSearch,
   whereDefined,
 } from '../../utils/codeIndex/index.js'
 import { startCodeIndexWatcher } from '../../utils/codeIndex/watcher.js'
@@ -94,6 +108,145 @@ async function graphCommand(
   }
 }
 
+async function repoCommand(
+  tokens: string[],
+  root: string,
+  json: boolean,
+  signal: AbortSignal,
+): Promise<{ type: 'text'; value: string }> {
+  const sub = tokens.filter(t => !t.startsWith('--') && t !== 'repo')[0] ?? 'status'
+  const arg = tokens.filter(t => !t.startsWith('--') && t !== 'repo' && t !== sub).join(' ')
+
+  if (sub === 'build') {
+    const { repo } = await buildRepoIndex({ root, signal })
+    return {
+      type: 'text',
+      value: json
+        ? JSON.stringify({ files: repo.files.length, path: repoIndexPath(root) }, null, 2)
+        : `Built repo index at ${repoIndexPath(root)}\n${formatRepoStats(repo)}`,
+    }
+  }
+
+  const repo = loadRepoIndex(root)
+  if (!repo) {
+    return {
+      type: 'text',
+      value: 'No repo index found. Build it first with `ur code-index repo build`.',
+    }
+  }
+
+  if (sub === 'status') {
+    return {
+      type: 'text',
+      value: json
+        ? JSON.stringify(
+            {
+              builtAt: repo.builtAt,
+              files: repo.files.length,
+              path: repoIndexPath(root),
+            },
+            null,
+            2,
+          )
+        : formatRepoStats(repo),
+    }
+  }
+
+  if (sub === 'search') {
+    if (!arg) return { type: 'text', value: 'Usage: ur code-index repo search <query>' }
+    const hits = repoSearch(repo, arg)
+    if (json) return { type: 'text', value: JSON.stringify({ hits }, null, 2) }
+    return {
+      type: 'text',
+      value: hits.length
+        ? hits.map(h => `  ${h.path} (${h.kind})${h.symbols ? ` [${h.symbols.slice(0, 5).join(', ')}${h.symbols.length > 5 ? '...' : ''}]` : ''}`).join('\n')
+        : 'No repo matches.',
+    }
+  }
+
+  if (sub === 'symbols') {
+    if (!arg) return { type: 'text', value: 'Usage: ur code-index repo symbols <query>' }
+    const symbols = loadSymbolIndex(root)
+    if (!symbols) return { type: 'text', value: 'No symbol index found.' }
+    const hits = symbolSearch(symbols, arg)
+    if (json) return { type: 'text', value: JSON.stringify({ hits }, null, 2) }
+    return {
+      type: 'text',
+      value: hits.length
+        ? hits.map(s => `  ${s.name} (${s.kind}) ${s.file}${s.line ? `:${s.line}` : ''}`).join('\n')
+        : 'No symbol matches.',
+    }
+  }
+
+  if (sub === 'callers') {
+    if (!arg) return { type: 'text', value: 'Usage: ur code-index repo callers <symbol>' }
+    const calls = loadCallIndex(root)
+    if (!calls) return { type: 'text', value: 'No call index found.' }
+    const hits = findCallers(calls, arg)
+    if (json) return { type: 'text', value: JSON.stringify({ hits }, null, 2) }
+    return {
+      type: 'text',
+      value: hits.length
+        ? hits.map(c => `  ${c.caller} -> ${c.callee} in ${c.file}${c.line ? `:${c.line}` : ''}`).join('\n')
+        : `No callers found for ${arg}.`,
+    }
+  }
+
+  if (sub === 'tests') {
+    if (!arg) return { type: 'text', value: 'Usage: ur code-index repo tests <file>' }
+    const tests = loadTestIndex(root)
+    if (!tests) return { type: 'text', value: 'No test index found.' }
+    const hits = findTestsForFile(tests, arg)
+    if (json) return { type: 'text', value: JSON.stringify({ hits }, null, 2) }
+    return {
+      type: 'text',
+      value: hits.length
+        ? hits.map(t => `  ${t.file}${t.name ? ` — ${t.name}` : ''}`).join('\n')
+        : `No tests found for ${arg}.`,
+    }
+  }
+
+  if (sub === 'docs') {
+    if (!arg) return { type: 'text', value: 'Usage: ur code-index repo docs <query>' }
+    const docs = loadDocIndex(root)
+    if (!docs) return { type: 'text', value: 'No doc index found.' }
+    const hits = docSearch(docs, arg)
+    if (json) return { type: 'text', value: JSON.stringify({ hits }, null, 2) }
+    return {
+      type: 'text',
+      value: hits.length
+        ? hits.map(d => `  ${d.path}${d.title ? ` — ${d.title}` : ''}`).join('\n')
+        : 'No doc matches.',
+    }
+  }
+
+  if (sub === 'configs') {
+    if (!arg) return { type: 'text', value: 'Usage: ur code-index repo configs <query>' }
+    const configs = loadConfigIndex(root)
+    if (!configs) return { type: 'text', value: 'No config index found.' }
+    const q = arg.toLowerCase()
+    const hits = configs.configs.filter(
+      c =>
+        c.path.toLowerCase().includes(q) ||
+        c.kind.toLowerCase().includes(q) ||
+        c.keys?.some(k => k.toLowerCase().includes(q)),
+    )
+    if (json) return { type: 'text', value: JSON.stringify({ hits }, null, 2) }
+    return {
+      type: 'text',
+      value: hits.length
+        ? hits.map(c => `  ${c.path} (${c.kind})${c.keys ? ` [${c.keys.slice(0, 5).join(', ')}${c.keys.length > 5 ? '...' : ''}]` : ''}`).join('\n')
+        : 'No config matches.',
+    }
+  }
+
+  return {
+    type: 'text',
+    value:
+      'Usage: ur code-index repo build|status|search <query>|symbols <query>|callers <symbol>|tests <file>|docs <query>|configs <query> [--json]',
+  }
+}
+
 export const call: LocalCommandCall = async (args: string) => {
   const tokens = parseArguments(args)
   const json = tokens.includes('--json')
@@ -105,6 +258,10 @@ export const call: LocalCommandCall = async (args: string) => {
     return graphCommand(tokens, root, json, signal)
   }
 
+  if (command === 'repo') {
+    return repoCommand(tokens, root, json, signal)
+  }
+
   if (command === 'build') {
     try {
       const { stats } = await buildOrUpdateIndex({ root, signal })
@@ -112,6 +269,11 @@ export const call: LocalCommandCall = async (args: string) => {
       if (tokens.includes('--graph')) {
         const graph = await buildCodeGraph({ root, signal })
         graphLine = `\n  graph:    ${graph.files.length} files at ${graphPath(root)}`
+      }
+      let repoLine = ''
+      if (tokens.includes('--repo')) {
+        const repoStats = await buildRepoIndex({ root, signal })
+        repoLine = `\n  repo:     ${repoStats.repo.files.length} files, ${repoStats.symbols.symbols.length} symbols at ${repoIndexPath(root)}`
       }
       if (json) {
         return { type: 'text', value: JSON.stringify(stats, null, 2) }
@@ -124,7 +286,8 @@ export const call: LocalCommandCall = async (args: string) => {
           `  files:    ${stats.filesIndexed} indexed, ${stats.filesSkipped} skipped, ${stats.filesRemoved} removed\n` +
           `  chunks:   ${stats.chunksTotal} total, ${stats.chunksEmbedded} (re)embedded\n` +
           `  ${stats.reused ? 'incremental update' : 'full build'}` +
-          graphLine,
+          graphLine +
+          repoLine,
       }
     } catch (error) {
       return {
@@ -149,6 +312,7 @@ export const call: LocalCommandCall = async (args: string) => {
     const handle = startCodeIndexWatcher({
       root,
       graph: tokens.includes('--graph'),
+      repo: tokens.includes('--repo'),
       onStatus: message => process.stderr.write(`${message}\n`),
       onError: message => process.stderr.write(`code-index watcher error: ${message}\n`),
     })
@@ -221,7 +385,8 @@ export const call: LocalCommandCall = async (args: string) => {
   return {
     type: 'text',
     value:
-      'Usage: ur code-index build [--graph] | search <query> | status | ' +
-      'watch [--graph] | graph build|impact <file>|deps <file>|where <symbol>|search <query> [--json]',
+      'Usage: ur code-index build [--graph] [--repo] | search <query> | status | ' +
+      'watch [--graph] [--repo] | graph build|impact <file>|deps <file>|where <symbol>|search <query> | ' +
+      'repo build|status|search <query>|symbols <query>|callers <symbol>|tests <file>|docs <query>|configs <query> [--json]',
   }
 }

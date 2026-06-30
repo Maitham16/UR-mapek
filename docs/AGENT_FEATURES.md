@@ -4,6 +4,11 @@ This page tracks the agent-platform additions that were prioritized after
 comparing UR with current Codex, Claude Code, Copilot, and Jules-style agent
 workflows.
 
+UR's intended advantage is not being another generic coding agent. It is a
+reproducible autonomous software engineering agent: every substantial task can
+be driven as `spec -> plan -> patch -> test -> report -> rollback`, with the
+spec as the durable source of truth and command evidence as the success gate.
+
 ## Commands
 
 ```sh
@@ -59,6 +64,13 @@ ur spec run auth-refactor --all
 ur spec verify auth-refactor
 ```
 
+## v1.22.3 Additions
+
+| Addition | Surface | What it adds |
+| --- | --- | --- |
+| Executable skill directories | `ur skill list\|show\|run\|init`, `src/skills/skillSpec.ts` | A `.ur/skills/<name>/` directory with `skill.yaml` compiles into a `WorkflowSpec`. Supports `instructions.md`, `scripts/`, `templates/`, and `checklists/`. Step prompts support `$ARGUMENTS`, `$0..$N`, and `$ARGUMENTS[N]`. |
+| Semantic repo index | `ur code-index repo build\|status\|search\|symbols\|callers\|tests\|docs\|configs`, `src/utils/codeIndex/repoIndex.ts` | Offline, dependency-free indexes under `.ur/code-index/`: `repo.json`, `symbols.json`, `calls.json`, `tests.json`, `docs.json`, `configs.json`. Classifies files, extracts symbols, records intra-file calls, maps tests, and indexes doc refs and config keys. |
+
 ## v1.22.2 Additions
 
 | Addition | Surface | What it adds |
@@ -77,6 +89,13 @@ ur spec verify auth-refactor
 | AgentKernel abstraction | `ur spec run|verify <name> --kernel`, `src/services/agents/kernel.ts` | Pure orchestrator separating planner, executor, verifier, critic, memory, router, and guard. Routes spec run/verify through kernel stages while keeping the legacy loop as default. Foundation for applying the same orchestration to workflows, crew, and CI loop. |
 | Rich task decomposition | `ur crew create|run|plan ... --decompose`, `src/services/agents/decomposer.ts` | Splits large goals into atomic subtasks with goal, files touched, risk level (low/medium/high), tests required, and rollback point. Deterministic fallback + optional LLM-driven JSON decomposition. |
 | Parallel specialized subagents | `ur pattern parallel "<task>" --execute`, `src/services/agents/patterns.ts` | Bug finder, patch writer, test writer, security auditor, and style reviewer run in parallel via the workflow executor, then a synthesizer merges results into one plan. |
+
+The spec-first path is the default reliability story: `ur spec init` turns a
+request into requirements/design/tasks, `ur spec run --all` applies atomic
+tasks, and `ur spec verify` requires compile proof, test proof, lint proof,
+diff proof, and runtime proof. The AgentKernel keeps planner, executor,
+verifier, critic, memory manager, tool router, and permission guard as separate
+components instead of one giant prompt.
 
 ## v1.21.0 Additions
 
@@ -99,6 +118,20 @@ ur spec verify auth-refactor
 | Docker tool | `Docker` | Container and compose operations via the `docker` CLI. |
 | Test-runner tool | `TestRunner` | Auto-detect and run project tests. |
 | Database tool | `Database` | SQL queries against SQLite, Postgres, MySQL, and DuckDB. |
+
+## Core Agent Primitives
+
+UR documents the same core primitives that Cursor-style agent products expose,
+while keeping them project-local and manifest-backed:
+
+| Primitive | UR surface | Project-backed source |
+| --- | --- | --- |
+| Agent | `ur`, `ur agents`, `ur crew`, `ur bg`, `ur agent-templates` | `.ur/agents/`, `AGENTS.md`, `UR.md` |
+| Rules | `ur context-pack scan`, `ur safety`, `ur guardrails`, `ur hooks` | `AGENTS.md`, `UR.md`, `.cursor/rules/*.mdc`, `.cursorrules`, `.ur/safety-policy.json`, `.ur/guardrails.json`, `.ur/hooks.json` |
+| MCP | `ur mcp`, built-in MCP server mode, MCP tools/resources | `.mcp.json`, `.ur/mcp/`, plugin manifests |
+| Skills | `/skills`, `/create-skill`, bundled skills, plugin skills | `.ur/skills/`, user skills, plugin skill folders |
+| CLI | `ur --help`, `ur -p`, `ur exec`, `ur acp`, workflow subcommands | `package.json` scripts, `.ur/project-manifest.json`, `.ur/verify.json` |
+| Models | `ur model`, `ur model-doctor`, model router, Ollama discovery | Ollama endpoint, settings, `OLLAMA_MODEL`, model metadata cache |
 
 ## v1.19.0 Additions
 

@@ -31,6 +31,7 @@ import { extractVerdict } from './cliStepRunner.js'
 import type { Verdict } from './executor.js'
 import { loadVerifyConfig, runGateCommands } from '../verifier/projectGates.js'
 import type { SpecMeta, SpecTask } from './spec.js'
+import { enforceNoPassWithoutProof } from './verificationProofs.js'
 
 export type KernelRole =
   | 'planner'
@@ -210,11 +211,19 @@ function defaultVerifier(): Verifier {
         maxTurns: options.maxTurns,
         skipPermissions: options.skipPermissions,
       })
+      const initialVerdict = out.verdict ?? extractVerdict(out.output) ?? 'PARTIAL'
+      const strict = enforceNoPassWithoutProof(initialVerdict, out.output)
+      if (strict.proofFailure) {
+        gateResults.push({
+          kind: 'note',
+          text: `FAIL proof: missing ${strict.proofCheck.missing.join(', ')}`,
+        })
+      }
       return {
         stage,
-        verdict: out.verdict ?? extractVerdict(out.output),
-        output: out.output,
-        isError: out.isError ?? false,
+        verdict: strict.verdict,
+        output: strict.output,
+        isError: (out.isError ?? false) || strict.proofFailure,
         artifacts: gateResults,
       }
     },

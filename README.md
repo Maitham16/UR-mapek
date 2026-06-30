@@ -10,9 +10,10 @@
   <a href="./QUALITY.md"><img alt="quality gate" src="https://img.shields.io/badge/quality-release%20gated-brightgreen.svg"></a>
 </p>
 
-UR Agent is a Bun and TypeScript command-line coding agent. It opens a stateful
-interactive terminal session by default, can run one-shot prompts for scripts,
-and includes workflow commands for specification-driven development,
+UR Agent is a Bun and TypeScript command-line coding agent: a reproducible
+autonomous software engineering agent. It opens a stateful interactive terminal
+session by default, can run one-shot prompts for scripts, and includes workflow
+commands for specification-driven development,
 multi-agent execution, test-first quality loops, CI repair loops, background
 agents, MCP servers, plugins, skills, memory, permission safety policy,
 project context packing, verification, and local model routing.
@@ -27,6 +28,9 @@ UR is built around the work that happens after a prompt: reading a repository,
 editing files, running commands, validating the result, preserving context, and
 handing work off to other tools or agents when needed.
 
+- **Reproducible engineering loop.** Substantial tasks should move through
+  `spec -> plan -> patch -> test -> report -> rollback`, with command evidence
+  captured before success is claimed.
 - **Terminal-native agent loop.** Run `ur` for an interactive coding session or
   `ur -p` for automation-friendly output.
 - **Local model runtime.** Use any model exposed by Ollama, set a specific host
@@ -130,7 +134,7 @@ as first-class subcommands in the shipped CLI.
 | --- | --- |
 | `ur` | Start an interactive terminal agent session in the current workspace. |
 | `ur -p` | Run a non-interactive prompt with text, JSON, or stream-JSON output. |
-| `ur spec` | Create requirements, design, and task documents under `.ur/specs/`, run the task list, and verify with strict proof gates. |
+| `ur spec` | Default spec-first workflow: create requirements, design, and task documents under `.ur/specs/`, run the task list, and verify with strict proof gates. |
 | `ur escalate` | Plan or run work with fast and oracle model tiers selected from local model capabilities. |
 | `ur arena` | Run multiple agents on the same task in isolated worktrees and surface the winning diff. |
 | `ur ci-loop` | Run a build or test command, hand failures to a fix agent, and retry with a bounded budget. |
@@ -146,7 +150,7 @@ as first-class subcommands in the shipped CLI.
 | `ur pattern` | Run multi-agent collaboration patterns (PEER, DOE, concurrent, handoff, debate, parallel); `--execute` runs them as a workflow. |
 | `ur goal` | Track long-horizon objectives that persist across sessions. |
 | `ur repo-edit` | Build a repo edit index, plan AST-aware renames, preview patches, and apply with rollback. |
-| `ur code-index` | Build, query, or watch a local semantic code index using Ollama embeddings. |
+| `ur code-index` | Build, query, or watch a local semantic code index using Ollama embeddings; `ur code-index repo` adds files/symbols/calls/tests/docs/configs. |
 | `ur semantic-memory` | Build and search a project-local memory index. |
 | `ur knowledge` | Manage a curated project knowledge base with provenance. |
 | `ur artifacts` | Capture diffs, test runs, notes, and review feedback under `.ur/artifacts/`. |
@@ -173,6 +177,14 @@ New slash skills run agentic work in isolated git worktrees with clean commits a
 Install matching agent templates with `ur agent-templates install`.
 
 New built-in tools (exposed through MCP and the ACP server): GitHub, API, Browser, Docker, TestRunner, Database. File-system and terminal tools are already built in (FileRead, FileEdit, FileWrite, Glob, Grep, Bash, PowerShell).
+
+UR also documents the core Cursor-style agent primitives as first-class,
+project-backed features: Agent surfaces (`ur`, `ur agents`, `ur crew`, `ur bg`),
+Rules (`AGENTS.md`, `UR.md`, `.cursor/rules/*.mdc`, `.cursorrules`, safety and
+guardrail config), MCP (`ur mcp`, `.mcp.json`, plugin MCP servers), Skills
+(`/skills`, bundled, project, user, and plugin skills), CLI (`ur --help`, `ur -p`,
+`ur exec`, `ur acp`), and Models (`ur model`, `ur model-doctor`, Ollama routing
+and discovery).
 
 Examples:
 
@@ -205,6 +217,10 @@ ur automation create nightly --schedule "0 9 * * 1-5" --prompt "Review open task
 ur repo-edit preview rename oldName --to newName
 ur repo-edit apply rename oldName --to newName --check "bun test"
 ur code-index search "where is the rate limiter configured"
+ur code-index repo build
+ur code-index repo search "rate limiter"
+ur skill init security-review
+ur skill run security-review "src/auth.ts"
 ur artifacts capture-tests --command "bun test"
 ur agent-task pr --create --dry-run
 ur acp serve --port 8123
@@ -306,6 +322,7 @@ Build and verify a release:
 
 ```sh
 bun run typecheck
+bun run lint
 bun test
 bun run bundle
 bun run smoke
